@@ -1747,6 +1747,31 @@ function loadCustomVideoUrl(triggerBroadcast = false) {
         return;
     }
 
+    if (url === "screenshare") {
+        // Display the video container and hide iframe to prepare for incoming WebRTC screenshare track
+        iframe.style.display = "none";
+        iframe.classList.add("hidden");
+        if (video) {
+            video.style.display = "block";
+            video.classList.remove("hidden");
+            video.src = "";
+            video.srcObject = null;
+        }
+        
+        partyState.activeMedia.id = "screenshare";
+        partyState.activeMedia.type = "screenshare";
+        partyState.activeMedia.title = "Host's Shared Screen";
+        document.getElementById("partyMediaTitle").innerText = "Host's Shared Screen";
+        document.getElementById("partyMediaMeta").innerText = "Live Screen Share";
+        
+        const prompt = document.getElementById("localFilePrompt");
+        if (prompt) {
+            prompt.style.display = "none";
+            prompt.classList.add("hidden");
+        }
+        return;
+    }
+
     // Automatically hide local file prompts when loading custom links
     const promptEl = document.getElementById("localFilePrompt");
     if (promptEl) {
@@ -2025,6 +2050,125 @@ function broadcastVideoMediaStream() {
     
     addSystemMessage("Video broadcast stream successfully initialized.");
     showToast("Broadcasting local video to members!");
+}
+
+// WebRTC Screen Sharing Broadcast functions
+async function startScreenShareBroadcast() {
+    if (!partyState.isHost && !partyState.allowGuestControls) {
+        showToast("Only the host can start sharing their screen!");
+        return;
+    }
+    
+    try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+                cursor: "always"
+            },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true
+            }
+        });
+        
+        const video = document.getElementById("partyVideo");
+        const iframe = document.getElementById("partyIframe");
+        if (video) {
+            video.srcObject = screenStream;
+            video.style.display = "block";
+            video.classList.remove("hidden");
+            video.muted = true; // Host mutes local video to prevent audio loops
+            video.play().catch(e => console.warn(e));
+        }
+        if (iframe) {
+            iframe.style.display = "none";
+            iframe.classList.add("hidden");
+        }
+
+        partyState.activeMedia.id = "screenshare";
+        partyState.activeMedia.type = "screenshare";
+        partyState.activeMedia.title = `${localUser.username}'s Screen`;
+        document.getElementById("partyMediaTitle").innerText = `${localUser.username}'s Screen`;
+        document.getElementById("partyMediaMeta").innerText = "Live Screen Share";
+
+        // Keep local reference to stream
+        partyState.localVideoStream = screenStream;
+
+        // Auto clean up when browser screen share stopped
+        screenStream.getVideoTracks()[0].onended = () => {
+            stopScreenShareBroadcast();
+        };
+
+        // Broadcast to all guests
+        broadcastScreenStream(screenStream);
+        
+        // Sync media state across Database/P2P
+        if (partyState.isHost) {
+            if (partyState.syncMode === "firebase") {
+                partyState.dbRoomRef.child("activeMedia").set(partyState.activeMedia).catch(handleFirebaseWriteError);
+                partyState.dbRoomRef.child("customUrl").set({
+                    url: "screenshare",
+                    timestamp: Date.now()
+                }).catch(handleFirebaseWriteError);
+            } else {
+                sendToParty({
+                    type: "mediaSync",
+                    media: partyState.activeMedia
+                });
+                sendToParty({
+                    type: "customUrlSync",
+                    url: "screenshare"
+                });
+            }
+        }
+
+        showToast("Screen sharing started!");
+        addSystemMessage("You are now sharing your screen.");
+
+    } catch (err) {
+        console.error("Screen share capture failed:", err);
+        showToast("Screen sharing cancelled or permission denied.");
+    }
+}
+
+function broadcastScreenStream(stream) {
+    const targets = new Set();
+    Object.keys(partyState.peerConns).forEach(id => targets.add(id));
+    if (partyState.members) {
+        Object.values(partyState.members).forEach(m => {
+            if (m.peerId && partyState.peer && m.peerId !== partyState.peer.id) {
+                targets.add(m.peerId);
+            }
+        });
+    }
+
+    targets.forEach(peerId => {
+        if (partyState.peerCalls[`video-${peerId}`]) {
+            try { partyState.peerCalls[`video-${peerId}`].close(); } catch(e) {}
+        }
+        const call = partyState.peer.call(peerId, stream, {
+            metadata: { type: "videoBroadcast" }
+        });
+        partyState.peerCalls[`video-${peerId}`] = call;
+    });
+}
+
+function stopScreenShareBroadcast() {
+    if (partyState.localVideoStream) {
+        partyState.localVideoStream.getTracks().forEach(track => track.stop());
+        partyState.localVideoStream = null;
+    }
+    
+    const video = document.getElementById("partyVideo");
+    if (video) {
+        video.srcObject = null;
+        video.style.display = "none";
+        video.classList.add("hidden");
+    }
+    
+    // Fallback back to default movie catalog
+    loadPartyMedia("693134", "movie", 1, 1, 1, true);
+    showToast("Screen sharing stopped.");
+    addSystemMessage("Screen sharing session ended.");
 }
 
 // YouTube Playback Synchronization Engine

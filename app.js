@@ -369,10 +369,10 @@ async function openPlayerModal(id, mediaType = "movie", autoResume = false) {
     // Setup servers
     if (switcher) {
         switcher.innerHTML = `
-            <button class="server-btn active" onclick="loadServer(1, this)">Server 1 (vidlink.pro)</button>
-            <button class="server-btn" onclick="loadServer(2, this)">Server 2 (vidsrc.xyz)</button>
-            <button class="server-btn" onclick="loadServer(3, this)">Server 3 (vidsrc.cc)</button>
-            <button class="server-btn" onclick="loadServer(4, this)">Server 4 (autoembed.cc)</button>
+            <button class="server-btn active" onclick="loadServer(1, this)"><span class="status-dot-live"></span> Server 1 (vidlink.pro) <span class="server-tag">4K FAST</span></button>
+            <button class="server-btn" onclick="loadServer(2, this)"><span class="status-dot-live"></span> Server 2 (vidsrc.xyz) <span class="server-tag">HD</span></button>
+            <button class="server-btn" onclick="loadServer(3, this)"><span class="status-dot-live"></span> Server 3 (vidsrc.cc) <span class="server-tag">MULTI</span></button>
+            <button class="server-btn" onclick="loadServer(4, this)"><span class="status-dot-live"></span> Server 4 (autoembed.cc) <span class="server-tag">AUTO</span></button>
         `;
     }
 
@@ -473,6 +473,49 @@ async function openPlayerModal(id, mediaType = "movie", autoResume = false) {
 
     // Load reviews
     loadReviewsForMedia(id);
+}
+
+function toggleTheaterMode() {
+    const modalBox = document.getElementById("modalBox");
+    const btn = document.getElementById("theaterModeBtn");
+    if (!modalBox) return;
+    const isTheater = modalBox.classList.toggle("theater-mode");
+    if (btn) {
+        btn.classList.toggle("active", isTheater);
+        btn.innerHTML = isTheater ? "🗕 Normal" : "🗖 Theater";
+    }
+    showToast(isTheater ? "🗖 Theater Mode Enabled" : "🗕 Standard View Restored");
+}
+
+function toggleCinemaLights() {
+    const modal = document.getElementById("playerModal");
+    const btn = document.getElementById("cinemaLightsBtn");
+    if (!modal) return;
+    const isDimmed = modal.classList.toggle("cinema-lights-dim");
+    if (btn) {
+        btn.classList.toggle("active", isDimmed);
+        btn.innerHTML = isDimmed ? "💡 Lights On" : "💡 Lights";
+    }
+    showToast(isDimmed ? "💡 Cinema Lights Dimmed" : "💡 Cinema Lights Restored");
+}
+
+function adjustSessionTime(deltaSeconds) {
+    currentSessionSeconds = Math.max(0, currentSessionSeconds + deltaSeconds);
+    const sessionTimeDisplay = document.getElementById("playerSessionTimeDisplay");
+    if (sessionTimeDisplay) sessionTimeDisplay.innerText = formatSeconds(currentSessionSeconds);
+
+    const s = document.getElementById("seasonSelect")?.value || 1;
+    const e = document.getElementById("episodeSelect")?.value || 1;
+
+    if (window.currentId) {
+        saveContinueWatching({
+            id: window.currentId,
+            watchedSeconds: currentSessionSeconds,
+            season: parseInt(s) || 1,
+            episode: parseInt(e) || 1
+        });
+    }
+    showToast(deltaSeconds > 0 ? `⏩ +${Math.round(deltaSeconds/60)}m (${formatSeconds(currentSessionSeconds)})` : `⏪ ${Math.round(deltaSeconds/60)}m (${formatSeconds(currentSessionSeconds)})`);
 }
 
 function confirmResumePlayback() {

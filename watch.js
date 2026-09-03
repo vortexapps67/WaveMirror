@@ -205,6 +205,35 @@ function dismissResumePlayback() {
     showToast("Starting stream from beginning");
 }
 
+function toggleCinemaLights() {
+    const isDimmed = document.body.classList.toggle("cinema-lights-dim");
+    const btn = document.getElementById("cinemaLightsBtn");
+    if (btn) {
+        btn.classList.toggle("active", isDimmed);
+        btn.innerHTML = isDimmed ? "💡 Lights On" : "💡 Lights";
+    }
+    showToast(isDimmed ? "💡 Cinema Lights Dimmed" : "💡 Cinema Lights Restored");
+}
+
+function adjustSessionTime(deltaSeconds) {
+    currentSessionSeconds = Math.max(0, currentSessionSeconds + deltaSeconds);
+    const sessionTimeDisplay = document.getElementById("playerSessionTimeDisplay");
+    if (sessionTimeDisplay) sessionTimeDisplay.innerText = formatSeconds(currentSessionSeconds);
+
+    const s = document.getElementById("seasonSelect")?.value || 1;
+    const e = document.getElementById("episodeSelect")?.value || 1;
+
+    if (currentId) {
+        saveCurrentProgress({
+            id: currentId,
+            watchedSeconds: currentSessionSeconds,
+            season: parseInt(s) || 1,
+            episode: parseInt(e) || 1
+        });
+    }
+    showToast(deltaSeconds > 0 ? `⏩ +${Math.round(deltaSeconds/60)}m (${formatSeconds(currentSessionSeconds)})` : `⏪ ${Math.round(deltaSeconds/60)}m (${formatSeconds(currentSessionSeconds)})`);
+}
+
 function saveManualBookmark() {
     const input = document.getElementById("manualBookmarkInput");
     if (!input || !input.value.trim()) {

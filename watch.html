@@ -80,15 +80,23 @@
     <div class="watch-container">
         <!-- Main Video Player Card -->
         <div class="watch-player-card">
-            <!-- Popup Shield Header Bar -->
+            <!-- Popup Shield Header Bar & Quick Control Deck -->
             <div class="shield-bar">
-                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--primary-cyan); font-weight: 700;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    <span>🛡️ Watch Shield Active (Popups Intercepted)</span>
+                <div class="shield-status-pill">
+                    <span class="status-dot-live"></span>
+                    <span id="shieldStatus">🛡️ Popup Shield Active</span>
                 </div>
-                <button class="btn-secondary" style="padding: 0.35rem 0.8rem; font-size: 0.75rem; border-color: var(--primary-cyan); background: rgba(0,0,0,0.5);" onclick="closeAdOverlay()">
-                    ⚡ Clear Ads / Refresh Stream
-                </button>
+                <div class="player-quick-tools">
+                    <button class="btn-tool" onclick="toggleCinemaLights()" id="cinemaLightsBtn" title="Dim surrounding lights">
+                        💡 Lights
+                    </button>
+                    <button class="btn-tool" onclick="closeAdOverlay()" title="Clear overlays and refresh stream">
+                        ⚡ Clear Ads
+                    </button>
+                    <button class="btn-tool" id="modalWatchPartyBtn" onclick="startWatchPartyFromPlayer()" style="border-color: var(--primary-cyan); color: #fff;">
+                        🍿 Watch Party
+                    </button>
+                </div>
             </div>
 
             <!-- Resume Where You Left Off Prompt Banner -->
@@ -103,21 +111,26 @@
                 </div>
             </div>
 
-            <!-- Video Player Box -->
-            <div class="player-wrapper" id="playerWrapper" style="width: 100%; aspect-ratio: 16/9; background: #000; position: relative;">
-                <iframe class="player-iframe" id="playerIframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%; height:100%; border:none;"></iframe>
+            <!-- Video Player Ambient Glow & Box -->
+            <div class="player-ambient-wrap">
+                <div class="player-ambient-glow"></div>
+                <div class="player-wrapper" id="playerWrapper" style="width: 100%; aspect-ratio: 16/9; background: #000; position: relative;">
+                    <iframe class="player-iframe" id="playerIframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%; height:100%; border:none;"></iframe>
+                </div>
             </div>
         </div>
 
         <!-- TV Controls (Season & Episode Selectors) -->
-        <div id="tvControls" class="tv-controls-bar hidden" style="display: none; gap: 1rem; align-items: center; margin-bottom: 1.5rem; background: rgba(255, 255, 255, 0.04); padding: 0.8rem 1.2rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary-cyan);">Season:</label>
-                <select id="seasonSelect" onchange="updateTvStream()" class="select-dropdown"></select>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary-cyan);">Episode:</label>
-                <select id="episodeSelect" onchange="updateTvStream()" class="select-dropdown"></select>
+        <div id="tvControls" class="tv-controls-bar hidden" style="display: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary-cyan);">Season:</label>
+                    <select id="seasonSelect" onchange="updateTvStream()" class="select-dropdown"></select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary-cyan);">Episode:</label>
+                    <select id="episodeSelect" onchange="updateTvStream()" class="select-dropdown"></select>
+                </div>
             </div>
         </div>
 
@@ -129,17 +142,19 @@
                 <button class="server-btn" onclick="loadServer(3, this)">Server 3 (vidsrc.cc)</button>
                 <button class="server-btn" onclick="loadServer(4, this)">Server 4 (autoembed.cc)</button>
             </div>
-            <span style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 600;">▶ Tip: Switch servers if a stream buffers</span>
+            <span style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 600;">⚡ Instant Engine Switch</span>
         </div>
 
         <!-- Bookmark / Progress Bar -->
         <div class="bookmark-bar" style="margin-bottom: 1.5rem;">
-            <span style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;">
-                ⏱️ Session Time: <strong id="playerSessionTimeDisplay" style="color: var(--primary-cyan);">00:00</strong>
-                <span id="playerSavedBookmarkNotice" style="color: var(--text-dim); margin-left: 0.5rem;">(Auto-saving progress)</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.45rem;">
+                ⏱️ Elapsed: <strong id="playerSessionTimeDisplay" style="color: var(--primary-cyan); font-size: 0.9rem;">00:00</strong>
+                <span id="playerSavedBookmarkNotice" style="color: var(--text-dim); margin-left: 0.4rem;">(Auto-saved)</span>
             </span>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <input type="text" id="manualBookmarkInput" placeholder="Set time (e.g. 45:20)" class="bookmark-input">
+            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                <button class="time-jump-btn" onclick="adjustSessionTime(-300)" title="Rewind 5 minutes">-5m</button>
+                <button class="time-jump-btn" onclick="adjustSessionTime(300)" title="Forward 5 minutes">+5m</button>
+                <input type="text" id="manualBookmarkInput" placeholder="Time (e.g. 45:20)" class="bookmark-input">
                 <button class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;" onclick="saveManualBookmark()">🔖 Bookmark</button>
             </div>
         </div>
@@ -147,7 +162,7 @@
         <!-- Media Info Details -->
         <div class="watch-details-section">
             <div>
-                <h1 id="modalTitle" style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;">Loading Stream...</h1>
+                <h1 id="modalTitle" style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem; letter-spacing: -0.5px;">Loading Stream...</h1>
                 <div style="display: flex; gap: 1rem; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.2rem;" id="modalMeta">
                     <span id="modalYear">----</span>
                     <span id="modalRating" style="color: var(--primary-gold); font-weight: 700;">★ --</span>
@@ -157,7 +172,7 @@
                 
                 <div style="display: flex; gap: 0.8rem; margin-top: 1.5rem; flex-wrap: wrap;">
                     <button class="btn-primary" id="modalWatchlistBtn" onclick="handleWatchlistToggle()">+ Add to Watchlist</button>
-                    <button class="btn-secondary" id="modalWatchPartyBtn" onclick="startWatchPartyFromPlayer()" style="border-color: var(--primary-gold); color: var(--primary-gold); font-weight: 600;">🍿 Host Watch Party</button>
+                </div>
                 </div>
             </div>
             

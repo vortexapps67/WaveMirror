@@ -207,6 +207,9 @@
         </div>
 
         <div style="display: flex; gap: 0.8rem; align-items: center;">
+            <button class="btn-secondary tv-mode-btn" onclick="toggleTvMode()" title="Toggle Smart TV 10-Foot UI (Key: T)" style="padding: 0.45rem 1.1rem; font-size: 0.85rem; border-color: var(--primary-cyan); color: #fff;">
+                📺 TV Mode
+            </button>
             <button class="btn-icon" onclick="toggleWatchlistDrawer()" title="Saved Watchlist" style="position: relative;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                 <span class="badge-count" id="watchlistCount">0</span>
@@ -260,7 +263,7 @@
             </div>
         </div>
 
-        <!-- TV Controls (Season & Episode Selectors) -->
+        <!-- TV Controls (Season & Episode Selectors + Accessible TV Grid) -->
         <div id="tvControls" class="tv-controls-bar hidden" style="display: none;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -272,6 +275,8 @@
                     <select id="episodeSelect" onchange="updateTvStream()" class="select-dropdown"></select>
                 </div>
             </div>
+            <!-- TV Remote Accessible Episode Tiles Rail -->
+            <div id="tvEpisodesGrid" class="tv-episodes-grid"></div>
         </div>
 
         <!-- Server Switcher Bar -->
@@ -363,8 +368,14 @@
         </div>
     </div>
 
-    <!-- Notification Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+    <!-- TV Remote Control Guide Pill (OSD) -->
+    <div class="tv-remote-guide" id="tvRemoteGuide">
+        <span style="display: flex; align-items: center; gap: 0.4rem;">📺 <strong>TV Mode</strong></span>
+        <span><span class="tv-key-badge">▲▼◄►</span> D-Pad</span>
+        <span><span class="tv-key-badge">OK</span> Select</span>
+        <span><span class="tv-key-badge">Esc / Back</span> Catalog</span>
+        <span><span class="tv-key-badge">T</span> Exit TV</span>
+    </div>
 
     <!-- Scripts -->
     <script src="data.js"></script>

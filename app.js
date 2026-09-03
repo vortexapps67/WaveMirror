@@ -1357,4 +1357,129 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     updateNavContinueLink();
+    initTvNavigation();
 });
+
+/* ---------------- 📺 10-Foot Smart TV Mode & Spatial Navigation ---------------- */
+function isSmartTvUserAgent() {
+    const ua = navigator.userAgent;
+    return /SmartTV|Tizen|Web0S|webOS|Android TV|GoogleTV|FireTV|AppleTV|PlayStation|Xbox|HbbTV|CrKey|LargeScreen/i.test(ua);
+}
+
+function initTvNavigation() {
+    const saved = localStorage.getItem("wavemirror_tv_mode");
+    const isTv = saved === "true" || (saved === null && isSmartTvUserAgent());
+    if (isTv) {
+        document.body.classList.add("tv-mode");
+    }
+    updateTvModeButtons();
+    setupSpatialNavigation();
+}
+
+function toggleTvMode() {
+    const isTv = document.body.classList.toggle("tv-mode");
+    localStorage.setItem("wavemirror_tv_mode", isTv ? "true" : "false");
+    updateTvModeButtons();
+    showToast(isTv ? "📺 Smart TV Mode Activated (10-Foot UI)" : "🖥️ Standard Web UI Restored");
+    if (isTv) {
+        focusFirstTvElement();
+    }
+}
+
+function updateTvModeButtons() {
+    const isTv = document.body.classList.contains("tv-mode");
+    const btns = document.querySelectorAll(".tv-mode-btn");
+    btns.forEach(btn => {
+        btn.innerHTML = isTv ? "📺 Exit TV Mode" : "📺 TV Mode";
+        btn.classList.toggle("active", isTv);
+    });
+}
+
+function focusFirstTvElement() {
+    const focusable = getFocusableElements();
+    if (focusable.length > 0) {
+        focusable[0].focus();
+        focusable[0].scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+}
+
+function getFocusableElements() {
+    return Array.from(document.querySelectorAll(
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"]), a[href], input:not([disabled]), select:not([disabled]), .movie-card, .top10-card, .continue-card, .server-btn, .similar-card, .episode-tv-tile, .genre-chip'
+    )).filter(el => {
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetWidth > 0 && el.offsetHeight > 0;
+    });
+}
+
+function setupSpatialNavigation() {
+    document.addEventListener("keydown", (e) => {
+        // 'T' toggles TV mode
+        if (e.key.toLowerCase() === "t" && !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
+            e.preventDefault();
+            toggleTvMode();
+            return;
+        }
+
+        if (!document.body.classList.contains("tv-mode")) return;
+
+        // D-Pad Arrow Navigation
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+            e.preventDefault();
+            navigateSpatial(e.key);
+        }
+    });
+}
+
+function navigateSpatial(direction) {
+    const focusables = getFocusableElements();
+    if (!focusables.length) return;
+
+    const current = document.activeElement && focusables.includes(document.activeElement) ? document.activeElement : null;
+    if (!current) {
+        focusables[0].focus();
+        focusables[0].scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+    }
+
+    const currentRect = current.getBoundingClientRect();
+    const currentCenter = {
+        x: currentRect.left + currentRect.width / 2,
+        y: currentRect.top + currentRect.height / 2
+    };
+
+    let bestCandidate = null;
+    let minDistance = Infinity;
+
+    focusables.forEach(el => {
+        if (el === current) return;
+        const rect = el.getBoundingClientRect();
+        const center = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
+
+        const dx = center.x - currentCenter.x;
+        const dy = center.y - currentCenter.y;
+
+        // Validate direction
+        let valid = false;
+        if (direction === "ArrowRight" && dx > 15 && Math.abs(dy) < Math.abs(dx) * 1.5) valid = true;
+        if (direction === "ArrowLeft" && dx < -15 && Math.abs(dy) < Math.abs(dx) * 1.5) valid = true;
+        if (direction === "ArrowDown" && dy > 15) valid = true;
+        if (direction === "ArrowUp" && dy < -15) valid = true;
+
+        if (valid) {
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestCandidate = el;
+            }
+        }
+    });
+
+    if (bestCandidate) {
+        bestCandidate.focus();
+        bestCandidate.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }
+}

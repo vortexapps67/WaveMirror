@@ -81,6 +81,11 @@
                 <span class="badge-count" id="watchlistCount">0</span>
             </button>
 
+            <!-- TV Mode Accessibility Toggle -->
+            <button class="btn-secondary tv-mode-btn" onclick="toggleTvMode()" title="Toggle Smart TV 10-Foot UI (Key: T)" style="padding: 0.35rem 0.85rem; font-size: 0.82rem; border-color: var(--primary-cyan); color: #fff;">
+                📺 TV Mode
+            </button>
+
             <!-- System Settings Button -->
             <button class="btn-icon" onclick="openAppSettingsModal()" title="System Settings" style="cursor: pointer; color: var(--text-muted);">
                 ⚙️
@@ -748,6 +753,14 @@
             <span>⚙️</span>
             <label>Settings</label>
         </button>
+    </div>
+
+    <!-- TV Remote Control Guide Pill (OSD) -->
+    <div class="tv-remote-guide" id="tvRemoteGuide">
+        <span style="display: flex; align-items: center; gap: 0.4rem;">📺 <strong>TV Mode</strong></span>
+        <span><span class="tv-key-badge">▲▼◄►</span> D-Pad</span>
+        <span><span class="tv-key-badge">OK</span> Select</span>
+        <span><span class="tv-key-badge">Esc / T</span> Exit TV Mode</span>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>

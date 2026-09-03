@@ -76,10 +76,17 @@ async function initializePlayer(autoResume = false) {
     const resumeBannerText = document.getElementById("resumeBannerText");
     const sessionTimeDisplay = document.getElementById("playerSessionTimeDisplay");
 
-    if (title) title.innerText = "Loading stream...";
-    if (overview) overview.innerText = "Connecting to TMDB API & stream servers...";
+    if (title) title.innerText = "Connecting to Stream...";
+    if (overview) overview.innerText = "Buffering stream engine...";
 
-    // Fetch stream details
+    // Start loading server 1 immediately so video begins buffering without delay
+    if (currentType === "tv") {
+        updateTvStream();
+    } else {
+        loadServer(1);
+    }
+
+    // Fetch stream details from TMDB
     let movie = await fetchStreamDetails(currentId, currentType);
     if (!movie) {
         movie = {
@@ -137,6 +144,7 @@ async function initializePlayer(autoResume = false) {
             const eSelect = document.getElementById("episodeSelect");
             if (sSelect) sSelect.value = targetSeason;
             if (eSelect) eSelect.value = targetEpisode;
+            updateTvStream();
         }
     } else {
         if (tvControls) {
@@ -162,13 +170,6 @@ async function initializePlayer(autoResume = false) {
     } else {
         pendingResumeData = null;
         if (resumeBanner) resumeBanner.style.display = "none";
-    }
-
-    // Stream load
-    if (currentType === "tv") {
-        updateTvStream();
-    } else {
-        loadServer(1);
     }
 
     // Save initial continue watching entry
@@ -515,30 +516,67 @@ function parseSeconds(str) {
     return 0;
 }
 
+function nextServer() {
+    currentServer = (currentServer % 6) + 1;
+    loadServer(currentServer);
+    showToast(`🔄 Switched to Server ${currentServer}`);
+}
+
 function loadServer(num, btnElement = null) {
     currentServer = num;
     const iframe = document.getElementById("playerIframe");
     if (!iframe) return;
 
+    const id = currentId;
+    const imdb = currentImdb || (id && id.startsWith('tt') ? id : '');
+    const s = document.getElementById("seasonSelect")?.value || 1;
+    const e = document.getElementById("episodeSelect")?.value || 1;
+
+    let src = "";
+
     if (currentType === "tv") {
-        updateTvStream();
+        if (num === 1) {
+            src = `https://vidlink.pro/tv/${id}/${s}/${e}`;
+        } else if (num === 2) {
+            src = `https://vidsrc.xyz/embed/tv/${id}/${s}-${e}`;
+        } else if (num === 3) {
+            src = `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`;
+        } else if (num === 4) {
+            src = `https://embed.su/embed/tv/${id}/${s}/${e}`;
+        } else if (num === 5) {
+            src = `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`;
+        } else {
+            src = `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}`;
+        }
     } else {
         if (num === 1) {
-            iframe.src = `https://vidlink.pro/movie/${currentId}`;
+            src = `https://vidlink.pro/movie/${id}`;
         } else if (num === 2) {
-            iframe.src = `https://vidsrc.xyz/embed/movie/${currentImdb}`;
+            src = imdb ? `https://vidsrc.xyz/embed/movie/${imdb}` : `https://vidsrc.xyz/embed/movie/${id}`;
         } else if (num === 3) {
-            iframe.src = `https://vidsrc.cc/embed/movie/${currentId}`;
+            src = `https://vidsrc.cc/v2/embed/movie/${id}`;
+        } else if (num === 4) {
+            src = `https://embed.su/embed/movie/${id}`;
+        } else if (num === 5) {
+            src = `https://player.autoembed.cc/embed/movie/${id}`;
         } else {
-            iframe.src = `https://autoembed.cc/embed/movie/${currentId}`;
+            src = `https://www.2embed.cc/embed/${id}`;
         }
     }
 
-    if (btnElement) {
-        const buttons = document.querySelectorAll(".server-btn");
-        buttons.forEach(b => b.classList.remove("active"));
-        btnElement.classList.add("active");
+    if (iframe.src !== src) {
+        iframe.src = src;
     }
+
+    // Update active state on server buttons
+    const buttons = document.querySelectorAll(".server-btn");
+    buttons.forEach((b, idx) => {
+        if (btnElement) {
+            b.classList.toggle("active", b === btnElement);
+        } else {
+            b.classList.toggle("active", idx === (num - 1));
+        }
+    });
 }
 
 function generateSeasonEpisodeDropdowns(seasonsCount) {
@@ -577,23 +615,11 @@ function selectEpisodeFromTvGrid(epNum) {
 }
 
 function updateTvStream() {
-    const s = document.getElementById("seasonSelect")?.value || 1;
-    const e = document.getElementById("episodeSelect")?.value || 1;
-    const iframe = document.getElementById("playerIframe");
-    if (!iframe) return;
-
-    if (currentServer === 1) {
-        iframe.src = `https://vidlink.pro/tv/${currentId}/${s}/${e}`;
-    } else if (currentServer === 2) {
-        iframe.src = `https://vidsrc.xyz/embed/tv/${currentId}/${s}-${e}`;
-    } else if (currentServer === 3) {
-        iframe.src = `https://vidsrc.cc/embed/tv/${currentId}/${s}/${e}`;
-    } else {
-        iframe.src = `https://autoembed.cc/embed/tv/${currentId}/${s}/${e}`;
-    }
-
+    loadServer(currentServer || 1);
     renderTvEpisodesGrid();
 
+    const s = document.getElementById("seasonSelect")?.value || 1;
+    const e = document.getElementById("episodeSelect")?.value || 1;
     if (currentId) {
         saveCurrentProgress({
             id: currentId,

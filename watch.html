@@ -233,6 +233,9 @@
                     <button class="btn-tool" onclick="toggleCinemaLights()" id="cinemaLightsBtn" title="Dim surrounding lights">
                         💡 Lights
                     </button>
+                    <button class="btn-tool" onclick="nextServer()" title="Switch to next streaming server">
+                        🔄 Switch Server
+                    </button>
                     <button class="btn-tool" onclick="closeAdOverlay()" title="Clear overlays and refresh stream">
                         ⚡ Clear Ads
                     </button>
@@ -258,7 +261,7 @@
             <div class="player-ambient-wrap">
                 <div class="player-ambient-glow"></div>
                 <div class="player-wrapper" id="playerWrapper" style="width: 100%; aspect-ratio: 16/9; background: #000; position: relative;">
-                    <iframe class="player-iframe" id="playerIframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="width:100%; height:100%; border:none;"></iframe>
+                    <iframe class="player-iframe" id="playerIframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen style="width:100%; height:100%; border:none;"></iframe>
                 </div>
             </div>
         </div>
@@ -282,10 +285,12 @@
         <!-- Server Switcher Bar -->
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 1rem;">
             <div class="server-switcher" id="serverSwitcher" style="margin-bottom: 0; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button class="server-btn active" onclick="loadServer(1, this)"><span class="status-dot-live"></span> Server 1 (vidlink.pro) <span class="server-tag">4K FAST</span></button>
+                <button class="server-btn active" onclick="loadServer(1, this)"><span class="status-dot-live"></span> Server 1 (vidlink) <span class="server-tag">4K FAST</span></button>
                 <button class="server-btn" onclick="loadServer(2, this)"><span class="status-dot-live"></span> Server 2 (vidsrc.xyz) <span class="server-tag">HD</span></button>
                 <button class="server-btn" onclick="loadServer(3, this)"><span class="status-dot-live"></span> Server 3 (vidsrc.cc) <span class="server-tag">MULTI</span></button>
-                <button class="server-btn" onclick="loadServer(4, this)"><span class="status-dot-live"></span> Server 4 (autoembed.cc) <span class="server-tag">AUTO</span></button>
+                <button class="server-btn" onclick="loadServer(4, this)"><span class="status-dot-live"></span> Server 4 (embed.su) <span class="server-tag">PRO</span></button>
+                <button class="server-btn" onclick="loadServer(5, this)"><span class="status-dot-live"></span> Server 5 (autoembed) <span class="server-tag">AUTO</span></button>
+                <button class="server-btn" onclick="loadServer(6, this)"><span class="status-dot-live"></span> Server 6 (2embed) <span class="server-tag">BACKUP</span></button>
             </div>
             <span style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 600;">⚡ Instant Engine Switch</span>
         </div>

@@ -882,3 +882,144 @@ function navigateSpatial(direction) {
         bestCandidate.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
     }
 }
+
+/* ---------------- 📡 Chromecast & Smart TV Direct Casting Engine ---------------- */
+let castSession = null;
+
+window['__onGCastApiAvailable'] = function(isAvailable) {
+    if (isAvailable && window.cast && window.cast.framework) {
+        try {
+            const castContext = cast.framework.CastContext.getInstance();
+            castContext.setOptions({
+                receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+            });
+
+            castContext.addEventListener(cast.framework.CastContextEventType.CAST_STATE_CHANGED, (event) => {
+                updateCastUiState(event.castState);
+            });
+
+            castContext.addEventListener(cast.framework.CastContextEventType.SESSION_STATE_CHANGED, (event) => {
+                const session = castContext.getCurrentSession();
+                if (session) {
+                    castSession = session;
+                    const deviceName = session.getCastDevice().friendlyName || "Smart TV";
+                    onCastSessionConnected(deviceName);
+                } else {
+                    castSession = null;
+                    onCastSessionDisconnected();
+                }
+            });
+        } catch (e) {
+            console.warn("[Cast] SDK initialization warning:", e);
+        }
+    }
+};
+
+function updateCastUiState(state) {
+    const castBtn = document.getElementById("castBtn");
+    const castBtnText = document.getElementById("castBtnText");
+    const castStatusBadge = document.getElementById("castStatusBadge");
+    
+    if (window.cast && window.cast.framework && state === cast.framework.CastState.CONNECTED) {
+        if (castBtn) castBtn.classList.add("connected");
+        if (castBtnText) castBtnText.innerText = "📺 Casting Active";
+        if (castStatusBadge) {
+            castStatusBadge.innerHTML = `<span class="status-dot-live"></span> Connected to TV`;
+            castStatusBadge.style.color = "var(--accent-emerald)";
+        }
+    } else {
+        if (castBtn) castBtn.classList.remove("connected");
+        if (castBtnText) castBtnText.innerText = "Cast to TV";
+        if (castStatusBadge) {
+            castStatusBadge.innerHTML = `<span class="status-dot-live"></span> Ready to Connect`;
+            castStatusBadge.style.color = "var(--primary-cyan)";
+        }
+    }
+}
+
+function onCastSessionConnected(deviceName) {
+    const info = document.getElementById("castDeviceInfo");
+    if (info) info.innerText = `Connected: ${deviceName}`;
+    updateCastUiState(window.cast?.framework?.CastState?.CONNECTED);
+    showToast(`📡 Connected to ${deviceName}! Streaming to TV.`);
+}
+
+function onCastSessionDisconnected() {
+    const info = document.getElementById("castDeviceInfo");
+    if (info) info.innerText = "No display connected";
+    updateCastUiState(window.cast?.framework?.CastState?.NOT_CONNECTED);
+    showToast("Disconnected from TV");
+}
+
+function initiateChromecast() {
+    const modal = document.getElementById("castModal");
+    const input = document.getElementById("tvDirectUrlInput");
+    if (input) {
+        input.value = window.location.href;
+    }
+    if (modal) {
+        modal.classList.add("active");
+        document.body.style.overflow = "hidden";
+    }
+
+    // If Google Cast context is active, request session directly
+    if (window.cast && window.cast.framework) {
+        try {
+            cast.framework.CastContext.getInstance().requestSession();
+        } catch (e) {
+            console.warn("[Cast] requestSession prompt:", e);
+        }
+    }
+}
+
+function closeCastModal() {
+    const modal = document.getElementById("castModal");
+    if (modal) modal.classList.remove("active");
+    document.body.style.overflow = "auto";
+}
+
+async function triggerNativeCastSession() {
+    // 1. Try Google Cast Web SDK
+    if (window.cast && window.cast.framework) {
+        try {
+            const context = cast.framework.CastContext.getInstance();
+            await context.requestSession();
+            return;
+        } catch (e) {
+            console.warn("[Cast] Google Cast session request:", e);
+        }
+    }
+
+    // 2. Try W3C Presentation API
+    if (window.PresentationRequest) {
+        try {
+            const request = new PresentationRequest([window.location.href]);
+            const connection = await request.start();
+            showToast("📡 Presentation connected to TV!");
+            return;
+        } catch (e) {
+            console.warn("[Cast] Presentation API request:", e);
+        }
+    }
+
+    // 3. Fallback: prompt copy link
+    copyTvStreamUrl();
+    showToast("💡 Open the copied link in your Smart TV browser to play directly!");
+}
+
+function copyTvStreamUrl() {
+    const url = window.location.href;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast("📋 TV Stream URL copied to clipboard!");
+        });
+    } else {
+        const input = document.getElementById("tvDirectUrlInput");
+        if (input) {
+            input.select();
+            document.execCommand("copy");
+            showToast("📋 TV Stream URL copied!");
+        }
+    }
+}

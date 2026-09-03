@@ -1,4 +1,4 @@
-// watch.js - WaveMirror Dedicated Streaming Player Page Controller
+// watch.js - WaveMirror Dedicated Streaming Hub Controller
 const CONTINUE_WATCHING_KEY = "wavemirror_continue_watching";
 
 let activeMovie = null;
@@ -10,11 +10,16 @@ let blockedPopupsCount = 0;
 let sessionWatchTimer = null;
 let currentSessionSeconds = 0;
 let pendingResumeData = null;
+let searchDebounce = null;
 
 // Global Ad & Popup Shield Override (Blocks window.open popups)
 window.open = function(url, target, features) {
     blockedPopupsCount++;
     console.warn(`[Shield] Intercepted popup #${blockedPopupsCount} attempt to: ${url}`);
+    const shieldStatus = document.getElementById("shieldStatus");
+    if (shieldStatus) {
+        shieldStatus.innerText = `🛡️ Popup Shield Active (${blockedPopupsCount} Blocked)`;
+    }
     showToast("🛡️ Ad Popup Intercepted");
     return null;
 };
@@ -30,17 +35,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     const params = new URLSearchParams(window.location.search);
     currentId = params.get("id");
     currentType = params.get("type") || "movie";
+    const autoResume = params.get("resume") === "true";
 
     if (!currentId) {
-        showToast("Error: No media selected!");
+        showToast("Error: No media selected! Redirecting...");
         setTimeout(() => { window.location.href = "./"; }, 1500);
         return;
     }
 
-    await initializePlayer();
+    updateWatchlistCount();
+    await initializePlayer(autoResume);
+    await fetchAndRenderSimilar(currentId, currentType);
+
+    // Global keyboard shortcut
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            closeWatchlistDrawer();
+            const results = document.getElementById("watchSearchResults");
+            if (results) results.classList.remove("active");
+        }
+    });
+
+    // Close search dropdown on click outside
+    document.addEventListener("click", (e) => {
+        const searchBox = document.querySelector(".watch-search-box");
+        const results = document.getElementById("watchSearchResults");
+        if (searchBox && !searchBox.contains(e.target) && results) {
+            results.classList.remove("active");
+        }
+    });
 });
 
-async function initializePlayer() {
+async function initializePlayer(autoResume = false) {
     const title = document.getElementById("modalTitle");
     const overview = document.getElementById("modalOverview");
     const tvControls = document.getElementById("tvControls");
@@ -51,29 +77,40 @@ async function initializePlayer() {
     if (title) title.innerText = "Loading stream...";
     if (overview) overview.innerText = "Connecting to TMDB API & stream servers...";
 
-    // Fetch details
+    // Fetch stream details
     let movie = await fetchStreamDetails(currentId, currentType);
     if (!movie) {
-        movie = { id: currentId, title: "Media Stream", year: "----", rating: "0.0", duration: "0h", overview: "Stream exclusive titles on WaveMirror." };
+        movie = {
+            id: currentId,
+            title: "Media Stream",
+            year: "2024",
+            rating: "8.0",
+            duration: "2h",
+            overview: "Stream exclusive titles in 4K Ultra HD on WaveMirror.",
+            genres: ["Featured", "Cinema"],
+            poster: "",
+            backdrop: ""
+        };
     }
     activeMovie = movie;
     currentImdb = movie.imdbId || movie.id;
+    document.title = `${movie.title} - WaveMirror Stream`;
 
     // Populate Info
     if (title) title.innerText = movie.title;
     const yElem = document.getElementById("modalYear");
-    if (yElem) yElem.innerText = movie.year;
+    if (yElem) yElem.innerText = movie.year || "2024";
     const rElem = document.getElementById("modalRating");
-    if (rElem) rElem.innerText = `★ ${movie.rating}`;
+    if (rElem) rElem.innerText = `★ ${movie.rating || '8.0'}`;
     const dElem = document.getElementById("modalDuration");
-    if (dElem) dElem.innerText = movie.duration;
-    if (overview) overview.innerText = movie.overview;
+    if (dElem) dElem.innerText = movie.duration || "2h";
+    if (overview) overview.innerText = movie.overview || "No overview available.";
     const dirElem = document.getElementById("modalDirector");
     if (dirElem) dirElem.innerText = movie.director || "Featured Director";
     const cElem = document.getElementById("modalCast");
-    if (cElem) cElem.innerText = movie.cast ? movie.cast.join(", ") : "Lead Actor";
+    if (cElem) cElem.innerText = movie.cast ? movie.cast.join(", ") : "Lead Cast";
     const gElem = document.getElementById("modalGenres");
-    if (gElem) gElem.innerText = movie.genres ? movie.genres.join(" • ") : "Action";
+    if (gElem) gElem.innerText = movie.genres ? movie.genres.join(" • ") : "Action • Cinema";
 
     // Watchlist state check
     updateWatchlistButton();
@@ -113,7 +150,10 @@ async function initializePlayer() {
         const timeStr = formatSeconds(saved.watchedSeconds || 0);
         const epStr = currentType === "tv" ? `Season ${saved.season || 1}, Episode ${saved.episode || 1}` : `timestamp ${timeStr}`;
 
-        if (resumeBanner && resumeBannerText) {
+        if (autoResume) {
+            if (resumeBanner) resumeBanner.style.display = "none";
+            showToast(`⚡ Resumed playback from ${epStr}`);
+        } else if (resumeBanner && resumeBannerText) {
             resumeBannerText.innerHTML = `You left off at <strong>${epStr}</strong>. Pick up where you left off?`;
             resumeBanner.style.display = "flex";
         }
@@ -146,7 +186,7 @@ async function initializePlayer() {
         watchedSeconds: currentSessionSeconds
     });
 
-    // Session watch timer
+    // Session watch timer (runs every 5 seconds to track elapsed duration)
     if (sessionWatchTimer) clearInterval(sessionWatchTimer);
     if (sessionTimeDisplay) sessionTimeDisplay.innerText = formatSeconds(currentSessionSeconds);
 
@@ -164,6 +204,145 @@ async function initializePlayer() {
             episode: parseInt(e) || 1
         });
     }, 5000);
+}
+
+async function fetchStreamDetails(id, type = "movie") {
+    try {
+        const endpoint = `${TMDB_BASE_URL}/${type}/${id}?api_key=${TMDB_API_KEY}&append_to_response=credits,external_ids`;
+        const res = await fetch(endpoint);
+        if (!res.ok) return null;
+        const data = await res.json();
+
+        const directorObj = data.credits?.crew?.find(c => c.job === "Director");
+        const castMembers = data.credits?.cast?.slice(0, 5).map(c => c.name) || [];
+        const genres = data.genres?.map(g => g.name) || [];
+
+        return {
+            id: data.id,
+            tmdbId: data.id,
+            imdbId: data.external_ids?.imdb_id || (type === "movie" ? "tt15239678" : "tt0944947"),
+            title: data.title || data.name,
+            year: (data.release_date || data.first_air_date || "2024").substring(0, 4),
+            rating: data.vote_average ? data.vote_average.toFixed(1) : "8.0",
+            duration: data.runtime ? `${Math.floor(data.runtime / 60)}h ${data.runtime % 60}m` : (data.episode_run_time?.[0] ? `${data.episode_run_time[0]}m/ep` : "45m/ep"),
+            overview: data.overview || "Stream exclusive titles on WaveMirror.",
+            genres: genres,
+            poster: data.poster_path ? `${TMDB_IMG_POSTER}${data.poster_path}` : "",
+            backdrop: data.backdrop_path ? `${TMDB_IMG_BACKDROP}${data.backdrop_path}` : "",
+            director: directorObj ? directorObj.name : "Featured Director",
+            cast: castMembers,
+            seasonsCount: data.number_of_seasons || 1,
+            type: type
+        };
+    } catch (e) {
+        console.warn("[Watch] Error fetching TMDB details:", e);
+        if (typeof FEATURED_MOVIES !== "undefined") {
+            return FEATURED_MOVIES.find(m => m.id == id) || null;
+        }
+        return null;
+    }
+}
+
+async function fetchAndRenderSimilar(id, type = "movie") {
+    const grid = document.getElementById("similarGrid");
+    if (!grid) return;
+
+    try {
+        const url = `${TMDB_BASE_URL}/${type}/${id}/recommendations?api_key=${TMDB_API_KEY}`;
+        const res = await fetch(url);
+        let items = [];
+        if (res.ok) {
+            const data = await res.json();
+            items = data.results || [];
+        }
+
+        // Fallback to top rated/popular if recommendations is empty
+        if (!items || items.length === 0) {
+            const fallbackUrl = `${TMDB_BASE_URL}/trending/${type}/week?api_key=${TMDB_API_KEY}`;
+            const fRes = await fetch(fallbackUrl);
+            if (fRes.ok) {
+                const fData = await fRes.json();
+                items = fData.results?.filter(i => String(i.id) !== String(id)) || [];
+            }
+        }
+
+        if (!items || items.length === 0) {
+            grid.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">No direct recommendations available.</p>`;
+            return;
+        }
+
+        grid.innerHTML = items.slice(0, 10).map(item => {
+            const title = item.title || item.name;
+            const year = (item.release_date || item.first_air_date || "2024").substring(0, 4);
+            const poster = item.poster_path ? `${TMDB_IMG_POSTER}${item.poster_path}` : (item.backdrop_path ? `${TMDB_IMG_BACKDROP}${item.backdrop_path}` : "");
+            const rating = item.vote_average ? item.vote_average.toFixed(1) : "8.0";
+
+            return `
+                <a class="similar-card" href="watch.html?id=${item.id}&type=${type}">
+                    <img class="similar-poster" src="${poster}" alt="${title}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=${encodeURIComponent(title)}'">
+                    <div class="similar-info">
+                        <div class="similar-title" title="${title}">${title}</div>
+                        <div class="similar-sub">
+                            <span>${year}</span>
+                            <span style="color: var(--primary-gold); font-weight: 700;">★ ${rating}</span>
+                        </div>
+                    </div>
+                </a>
+            `;
+        }).join('');
+    } catch (e) {
+        console.warn("[Watch] Error rendering recommendations:", e);
+    }
+}
+
+function handleWatchLiveSearch(query) {
+    clearTimeout(searchDebounce);
+    const resultsContainer = document.getElementById("watchSearchResults");
+    if (!resultsContainer) return;
+
+    if (!query || query.trim().length < 2) {
+        resultsContainer.innerHTML = "";
+        resultsContainer.classList.remove("active");
+        return;
+    }
+
+    searchDebounce = setTimeout(async () => {
+        try {
+            const res = await fetch(`${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query.trim())}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const valid = (data.results || []).filter(item => (item.media_type === "movie" || item.media_type === "tv") && (item.poster_path || item.backdrop_path));
+
+            if (valid.length === 0) {
+                resultsContainer.innerHTML = `<div style="padding: 1rem; color: var(--text-muted); font-size: 0.85rem; text-align: center;">No matches found for "${query}"</div>`;
+                resultsContainer.classList.add("active");
+                return;
+            }
+
+            resultsContainer.innerHTML = valid.slice(0, 6).map(item => {
+                const title = item.title || item.name;
+                const type = item.media_type || "movie";
+                const year = (item.release_date || item.first_air_date || "2024").substring(0, 4);
+                const poster = item.poster_path ? `${TMDB_IMG_POSTER}${item.poster_path}` : `${TMDB_IMG_BACKDROP}${item.backdrop_path}`;
+                const rating = item.vote_average ? item.vote_average.toFixed(1) : "8.0";
+
+                return `
+                    <a class="watch-search-item" href="watch.html?id=${item.id}&type=${type}">
+                        <img src="${poster}" alt="${title}">
+                        <div style="flex: 1; overflow: hidden;">
+                            <div style="font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${title}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                                <span style="text-transform: uppercase; color: var(--primary-cyan);">${type}</span> • ${year} • ★ ${rating}
+                            </div>
+                        </div>
+                    </a>
+                `;
+            }).join('');
+            resultsContainer.classList.add("active");
+        } catch (e) {
+            console.warn("[Watch] Live search error:", e);
+        }
+    }, 300);
 }
 
 function confirmResumePlayback() {
@@ -420,6 +599,7 @@ function handleWatchlistToggle() {
         showToast(`Removed "${activeMovie.title}" from Watchlist`);
     }
     updateWatchlistButton();
+    updateWatchlistCount();
 }
 
 function updateWatchlistButton() {
@@ -429,6 +609,68 @@ function updateWatchlistButton() {
     let watchlist = JSON.parse(localStorage.getItem("wavemirror_watchlist")) || [];
     const inWatchlist = watchlist.some(m => String(m.id) === String(activeMovie.id));
     btn.innerText = inWatchlist ? "✓ In Watchlist" : "+ Add to Watchlist";
+}
+
+function updateWatchlistCount() {
+    const badge = document.getElementById("watchlistCount");
+    if (!badge) return;
+    const watchlist = JSON.parse(localStorage.getItem("wavemirror_watchlist")) || [];
+    badge.innerText = watchlist.length;
+}
+
+function toggleWatchlistDrawer() {
+    const drawer = document.getElementById("drawerBackdrop");
+    if (!drawer) return;
+    const isActive = drawer.classList.toggle("active");
+    if (isActive) {
+        renderWatchlistDrawer();
+    }
+}
+
+function closeWatchlistDrawer() {
+    const drawer = document.getElementById("drawerBackdrop");
+    if (drawer) drawer.classList.remove("active");
+}
+
+function renderWatchlistDrawer() {
+    const container = document.getElementById("watchlistContent");
+    if (!container) return;
+    const watchlist = JSON.parse(localStorage.getItem("wavemirror_watchlist")) || [];
+
+    if (watchlist.length === 0) {
+        container.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: var(--text-muted); gap: 0.8rem; padding: 2rem;">
+                <span style="font-size: 2.5rem;">🍿</span>
+                <h4 style="color: #fff; font-size: 1.1rem; margin: 0;">Your Watchlist is Empty</h4>
+                <p style="font-size: 0.85rem; margin: 0; line-height: 1.5;">Save titles to watch later by clicking "+ Add to Watchlist".</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = watchlist.map(item => `
+        <div class="watchlist-card" style="display: flex; gap: 0.8rem; background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 0.6rem; margin-bottom: 0.8rem; align-items: center;">
+            <img src="${item.poster}" alt="${item.title}" style="width: 50px; height: 75px; border-radius: 4px; object-fit: cover;">
+            <div style="flex: 1; overflow: hidden;">
+                <div style="font-weight: 700; font-size: 0.9rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin: 0.2rem 0;">★ ${item.rating || '8.0'} • ${item.year || '2024'}</div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.4rem;">
+                    <a href="watch.html?id=${item.id}&type=${item.type || 'movie'}" class="btn-primary" style="padding: 0.25rem 0.65rem; font-size: 0.72rem; text-decoration: none;">▶ Play</a>
+                    <button class="btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.72rem;" onclick="removeFromWatchlist('${item.id}')">✕ Remove</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function removeFromWatchlist(id) {
+    let watchlist = JSON.parse(localStorage.getItem("wavemirror_watchlist")) || [];
+    watchlist = watchlist.filter(m => String(m.id) !== String(id));
+    localStorage.setItem("wavemirror_watchlist", JSON.stringify(watchlist));
+    renderWatchlistDrawer();
+    updateWatchlistCount();
+    updateWatchlistButton();
+    showToast("Removed from Watchlist");
 }
 
 function startWatchPartyFromPlayer() {

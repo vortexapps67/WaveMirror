@@ -1700,17 +1700,33 @@ function updatePillThumbPosition(tabName, immediate = false) {
 
     const targetX = btnRect.left - dockRect.left - 6;
 
+    // Reset optical lens & fluid stretch variables
+    const navItems = dock.querySelectorAll(".mobile-nav-item");
+    navItems.forEach(btn => {
+        btn.style.removeProperty("--lens-scale");
+        btn.style.removeProperty("--lens-ty");
+        btn.style.removeProperty("--lens-glow");
+    });
+
+    thumb.style.setProperty("--drag-scale-x", "1");
+    thumb.style.setProperty("--drag-scale-y", "1");
+    thumb.style.setProperty("--drag-skew", "0deg");
+    thumb.style.setProperty("--glass-glow-x", "50%");
+    thumb.style.setProperty("--glint-deg", "90deg");
+
     if (immediate) {
         thumb.style.transition = "none";
+        thumb.style.setProperty("--drag-x", `${targetX}px`);
         thumb.style.transform = `translate3d(${targetX}px, 0, 0)`;
         void thumb.offsetWidth; // Force reflow
         thumb.style.transition = "";
     } else {
+        thumb.style.setProperty("--drag-x", `${targetX}px`);
         thumb.style.transform = `translate3d(${targetX}px, 0, 0)`;
     }
 }
 
-// Initialize Interactive Hold & Slide Frosted Glass Floating Pill Dock
+// Initialize Apple Liquid Glass Live Dragging & Fluid Magnification Dock
 function initPillDockSlider() {
     const dock = document.getElementById("appBottomNav");
     const thumb = document.getElementById("pillSliderThumb");
@@ -1722,7 +1738,9 @@ function initPillDockSlider() {
     let isPointerDown = false;
     let startX = 0;
     let startY = 0;
-    let hasMoved = false;
+    let lastX = 0;
+    let lastTime = 0;
+    let currentVx = 0;
     let currentHoveredIndex = -1;
     let isCancelled = false;
     let animFrame = null;
@@ -1752,8 +1770,8 @@ function initPillDockSlider() {
 
     function isOutsideCancelZone(clientX, clientY) {
         const dockRect = dock.getBoundingClientRect();
-        const verticalTolerance = 36; // px above or below dock
-        const horizontalTolerance = 24; // px left or right of dock
+        const verticalTolerance = 36;
+        const horizontalTolerance = 24;
         return (
             clientY < (dockRect.top - verticalTolerance) ||
             clientY > (dockRect.bottom + verticalTolerance) ||
@@ -1762,14 +1780,33 @@ function initPillDockSlider() {
         );
     }
 
+    function applyLiquidOptics(thumbX, slotWidth) {
+        const thumbCenter = thumbX + slotWidth / 2;
+        const maxRadius = slotWidth * 1.15;
+
+        navItems.forEach((btn) => {
+            const btnCenter = (btn.offsetLeft - 6) + (btn.offsetWidth / 2);
+            const dist = Math.abs(thumbCenter - btnCenter);
+            const proximity = Math.max(0, 1 - (dist / maxRadius));
+            const lensGlow = Math.pow(proximity, 1.8);
+            const lensScale = 1 + (0.22 * lensGlow);
+            const lensTy = -4 * lensGlow;
+
+            btn.style.setProperty("--lens-scale", lensScale.toFixed(3));
+            btn.style.setProperty("--lens-ty", `${lensTy.toFixed(2)}px`);
+            btn.style.setProperty("--lens-glow", lensGlow.toFixed(3));
+        });
+    }
+
     function onPointerDown(e) {
-        // Only primary button / touch
         if (e.button && e.button !== 0) return;
         isPointerDown = true;
-        hasMoved = false;
         isCancelled = false;
         startX = e.clientX;
         startY = e.clientY;
+        lastX = e.clientX;
+        lastTime = performance.now();
+        currentVx = 0;
         activePointerId = e.pointerId;
 
         if (dock.setPointerCapture && e.pointerId !== undefined) {
@@ -1778,8 +1815,13 @@ function initPillDockSlider() {
 
         thumb.classList.add("is-dragging");
         thumb.classList.remove("is-canceling");
+
+        const dockRect = dock.getBoundingClientRect();
+        const slotWidth = (dockRect.width - 12) / tabs.length;
         const thumbX = calculateThumbX(e.clientX);
         thumb.style.setProperty("--drag-x", `${thumbX}px`);
+
+        applyLiquidOptics(thumbX, slotWidth);
 
         currentHoveredIndex = getIndexFromPointerX(e.clientX);
         navItems.forEach((btn, idx) => {
@@ -1794,25 +1836,49 @@ function initPillDockSlider() {
     function onPointerMove(e) {
         if (!isPointerDown) return;
 
-        const distX = Math.abs(e.clientX - startX);
-        const distY = Math.abs(e.clientY - startY);
-        if (distX > 6 || distY > 6) {
-            hasMoved = true;
-        }
+        const now = performance.now();
+        const dt = Math.max(1, now - lastTime);
+        const instantVx = ((e.clientX - lastX) / dt) * 16.6;
+        currentVx = currentVx * 0.65 + instantVx * 0.35;
+        lastX = e.clientX;
+        lastTime = now;
 
         if (animFrame) cancelAnimationFrame(animFrame);
         animFrame = requestAnimationFrame(() => {
-            // Check if user dragged outside to cancel selection
             isCancelled = isOutsideCancelZone(e.clientX, e.clientY);
 
             if (isCancelled) {
                 thumb.classList.add("is-canceling");
-                navItems.forEach(btn => btn.classList.remove("is-hovered"));
+                navItems.forEach(btn => {
+                    btn.classList.remove("is-hovered");
+                    btn.style.removeProperty("--lens-scale");
+                    btn.style.removeProperty("--lens-ty");
+                    btn.style.removeProperty("--lens-glow");
+                });
                 currentHoveredIndex = -1;
             } else {
                 thumb.classList.remove("is-canceling");
+
+                const dockRect = dock.getBoundingClientRect();
+                const slotWidth = (dockRect.width - 12) / tabs.length;
                 const thumbX = calculateThumbX(e.clientX);
+
+                // Apple Liquid Glass Viscosity & Dynamic Stretch
+                const stretchX = 1 + Math.min(0.24, Math.abs(currentVx) * 0.014);
+                const stretchY = 1 / Math.sqrt(stretchX);
+                const skew = Math.max(-6, Math.min(6, -currentVx * 0.32));
+                const glintDeg = 90 + Math.max(-35, Math.min(35, currentVx * 1.8));
+                const glowX = 50 + Math.max(-28, Math.min(28, currentVx * 2.2));
+
                 thumb.style.setProperty("--drag-x", `${thumbX}px`);
+                thumb.style.setProperty("--drag-scale-x", stretchX.toFixed(3));
+                thumb.style.setProperty("--drag-scale-y", stretchY.toFixed(3));
+                thumb.style.setProperty("--drag-skew", `${skew.toFixed(2)}deg`);
+                thumb.style.setProperty("--glint-deg", `${glintDeg.toFixed(1)}deg`);
+                thumb.style.setProperty("--glass-glow-x", `${glowX.toFixed(1)}%`);
+
+                // Apply Optical Magnification Lens to Buttons
+                applyLiquidOptics(thumbX, slotWidth);
 
                 const newHoveredIndex = getIndexFromPointerX(e.clientX);
                 if (newHoveredIndex !== currentHoveredIndex) {
@@ -1839,10 +1905,14 @@ function initPillDockSlider() {
 
         thumb.classList.remove("is-dragging");
         thumb.classList.remove("is-canceling");
-        navItems.forEach(btn => btn.classList.remove("is-hovered"));
+        navItems.forEach(btn => {
+            btn.classList.remove("is-hovered");
+            btn.style.removeProperty("--lens-scale");
+            btn.style.removeProperty("--lens-ty");
+            btn.style.removeProperty("--lens-glow");
+        });
 
         // If cancelled (dragged away / outside) or released outside dock zone:
-        // Do NOT select or switch anything — smoothly snap thumb back to current active tab
         if (isCancelled || isOutsideCancelZone(e.clientX, e.clientY)) {
             updatePillThumbPosition(currentAppTab);
             return;
@@ -1863,7 +1933,12 @@ function initPillDockSlider() {
         activePointerId = null;
         thumb.classList.remove("is-dragging");
         thumb.classList.remove("is-canceling");
-        navItems.forEach(btn => btn.classList.remove("is-hovered"));
+        navItems.forEach(btn => {
+            btn.classList.remove("is-hovered");
+            btn.style.removeProperty("--lens-scale");
+            btn.style.removeProperty("--lens-ty");
+            btn.style.removeProperty("--lens-glow");
+        });
         updatePillThumbPosition(currentAppTab);
     }
 

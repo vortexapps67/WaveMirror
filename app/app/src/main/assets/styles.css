@@ -2709,7 +2709,7 @@ google-cast-launcher {
     box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);
 }
 
-/* Floating Frosted Glass Pill Menu Switcher (iOS/VisionOS Inspired) */
+/* Floating Frosted Glass Pill Menu Switcher (Apple Liquid Glass) */
 .mobile-bottom-nav {
     position: fixed;
     bottom: max(16px, calc(12px + env(safe-area-inset-bottom, 0px)));
@@ -2717,25 +2717,26 @@ google-cast-launcher {
     transform: translateX(-50%);
     width: min(calc(100% - 28px), 430px);
     height: 64px;
-    background: rgba(12, 13, 18, 0.76);
-    backdrop-filter: blur(36px) saturate(200%);
-    -webkit-backdrop-filter: blur(36px) saturate(200%);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(14, 15, 22, 0.74);
+    backdrop-filter: blur(40px) saturate(210%);
+    -webkit-backdrop-filter: blur(40px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 9999px;
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 4px 6px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 
-                inset 0 1px 1px rgba(255, 255, 255, 0.3), 
-                inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 
+                inset 0 1px 1px rgba(255, 255, 255, 0.35), 
+                inset 0 -1px 2px rgba(0, 0, 0, 0.45);
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
+    overflow: visible;
 }
 
-/* Chromatic Refractive Liquid Glass Slider Bubble */
+/* Chromatic Refractive Apple Liquid Glass Slider Bubble */
 .pill-slider-thumb {
     position: absolute;
     top: 5px;
@@ -2743,65 +2744,69 @@ google-cast-launcher {
     left: 6px;
     width: calc((100% - 12px) / 5);
     border-radius: 9999px;
-    background: radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.28) 0%, rgba(244, 63, 94, 0.28) 45%, rgba(6, 182, 212, 0.2) 80%, rgba(99, 102, 241, 0.32) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1.5px solid rgba(255, 255, 255, 0.45);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 
-                inset 0 2px 4px rgba(255, 255, 255, 0.85), 
-                inset 0 -2px 6px rgba(6, 182, 212, 0.65), 
-                0 0 24px rgba(244, 63, 94, 0.4);
+    background: radial-gradient(ellipse at var(--glass-glow-x, 50%) 30%, 
+                rgba(255, 255, 255, 0.38) 0%, 
+                rgba(244, 63, 94, 0.32) 40%, 
+                rgba(6, 182, 212, 0.26) 75%, 
+                rgba(99, 102, 241, 0.38) 100%);
+    backdrop-filter: blur(28px) saturate(220%);
+    -webkit-backdrop-filter: blur(28px) saturate(220%);
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55), 
+                inset 0 2.5px 4px rgba(255, 255, 255, 0.9), 
+                inset 0 -2.5px 6px rgba(6, 182, 212, 0.7), 
+                0 0 28px rgba(244, 63, 94, 0.45);
     pointer-events: none;
     z-index: 1;
-    transform: translate3d(0, 0, 0);
-    transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
-    will-change: transform;
+    transform: translate3d(var(--drag-x, 0px), 0, 0) scale(var(--drag-scale-x, 1), var(--drag-scale-y, 1)) skewX(var(--drag-skew, 0deg));
+    transition: transform 0.42s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.3s ease, opacity 0.25s ease;
+    will-change: transform, box-shadow;
+    transform-origin: center center;
 }
 
-/* Iridescent Prismatic Glint on Top & Bottom of Slider */
+/* Iridescent Prismatic Glints on Top & Bottom */
 .pill-slider-thumb::before {
     content: '';
     position: absolute;
-    top: 1px;
-    left: 15%;
-    right: 15%;
+    top: 1.5px;
+    left: 12%;
+    right: 12%;
     height: 3px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), rgba(6, 182, 212, 0.9), transparent);
+    background: linear-gradient(var(--glint-deg, 90deg), transparent, rgba(255, 255, 255, 0.95), rgba(6, 182, 212, 0.9), transparent);
     border-radius: 9999px;
     filter: blur(0.5px);
 }
 .pill-slider-thumb::after {
     content: '';
     position: absolute;
-    bottom: 1px;
-    left: 20%;
-    right: 20%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(244, 63, 94, 0.9), rgba(255, 215, 0, 0.8), transparent);
+    bottom: 1.5px;
+    left: 18%;
+    right: 18%;
+    height: 2.5px;
+    background: linear-gradient(var(--glint-deg, 90deg), transparent, rgba(244, 63, 94, 0.9), rgba(255, 215, 0, 0.85), transparent);
     border-radius: 9999px;
     filter: blur(0.5px);
 }
 
-/* Active Dragging State: Scaled, Stretched & Super Glow */
+/* Live Dragging State: Organic Dynamic Fluid Stretch & Glow */
 .pill-slider-thumb.is-dragging {
-    transition: none !important;
-    transform: translate3d(var(--drag-x, 0px), 0, 0) scale(1.12, 0.92);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 
+    transition: transform 0.04s cubic-bezier(0, 0, 0.2, 1), box-shadow 0.2s ease !important;
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.75), 
                 inset 0 3px 6px rgba(255, 255, 255, 0.95), 
-                inset 0 -3px 8px rgba(6, 182, 212, 0.8), 
-                0 0 36px rgba(244, 63, 94, 0.65);
-    border-color: rgba(255, 255, 255, 0.7);
+                inset 0 -3px 8px rgba(6, 182, 212, 0.85), 
+                0 0 42px rgba(244, 63, 94, 0.7);
+    border-color: rgba(255, 255, 255, 0.75);
 }
 
-/* Neutral Drag Cancellation State (When dragged outside without selecting) */
+/* Neutral Drag Cancellation State */
 .pill-slider-thumb.is-canceling {
     opacity: 0.45;
-    transform: translate3d(var(--drag-x, 0px), 0, 0) scale(0.92, 0.92) !important;
+    transform: translate3d(var(--drag-x, 0px), 0, 0) scale(0.88, 0.88) !important;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
-    filter: grayscale(0.5);
+    filter: grayscale(0.6);
 }
 
-/* Nav Item Buttons */
+/* Nav Item Buttons with Apple Magnification Optical Lens Effect */
 .mobile-nav-item,
 .mobile-bottom-nav * {
     user-select: none !important;
@@ -2829,17 +2834,21 @@ google-cast-launcher {
     -webkit-tap-highlight-color: transparent;
     flex: 1;
     height: 100%;
-    transition: color 0.2s ease, transform 0.2s ease;
+    transform: translateY(var(--lens-ty, 0px)) scale(var(--lens-scale, 1));
+    transition: color 0.18s ease, transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: transform, color;
 }
 .mobile-nav-item svg {
-    transition: transform 0.25s var(--ease), stroke 0.25s var(--ease);
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), stroke 0.2s ease, filter 0.2s ease;
+    filter: drop-shadow(0 0 calc(var(--lens-glow, 0) * 10px) rgba(255, 255, 255, 0.8));
 }
 .mobile-nav-item label {
     font-size: 0.6875rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     cursor: pointer;
-    transition: color 0.25s var(--ease);
+    transition: color 0.2s ease;
+    text-shadow: 0 0 calc(var(--lens-glow, 0) * 8px) rgba(255, 255, 255, 0.65);
 }
 .mobile-nav-item:hover, .mobile-nav-item.is-hovered {
     color: var(--text-main);
@@ -2848,14 +2857,14 @@ google-cast-launcher {
     color: #fff;
 }
 .mobile-nav-item.active svg {
-    transform: translateY(-1px) scale(1.05);
+    transform: translateY(-1px) scale(1.06);
     stroke: #fff;
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7));
 }
 .mobile-nav-item.active label {
     color: #fff;
     font-weight: 700;
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
 }
 
 /* Discover Engine Deck */

@@ -1068,43 +1068,44 @@
                 </div>
             </div>
 
-            <!-- Download Options Deck -->
-            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
-                <!-- Direct Fast MP4 Mirror -->
+            <!-- Direct Download Mirrors -->
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
+                <!-- Direct High-Speed Mirror 1 -->
                 <a class="download-option-card" id="downloadDirectLink1" target="_blank" rel="noopener noreferrer">
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
                         <span style="font-size: 1.3rem;">⚡</span>
                         <div>
-                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Direct High-Speed MP4 (1080p Full HD)</div>
-                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Vidlink Stream Gateway • Direct Browser Download</div>
+                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Direct Fast Stream 1 (1080p Ultra HD)</div>
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Vidlink Direct Server • 1-Click Stream & Save</div>
                         </div>
                     </div>
-                    <span class="btn-primary" style="padding: 0.35rem 0.75rem; font-size: var(--fs-2xs);">Download</span>
+                    <span class="btn-primary" style="padding: 0.35rem 0.75rem; font-size: var(--fs-2xs);">Direct Link</span>
                 </a>
 
-                <!-- Alternative Stream Mirror -->
+                <!-- Direct High-Speed Mirror 2 -->
                 <a class="download-option-card" id="downloadDirectLink2" target="_blank" rel="noopener noreferrer">
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
                         <span style="font-size: 1.3rem;">🚀</span>
                         <div>
-                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Fast Direct Stream (720p / 1080p Auto)</div>
-                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">AutoEmbed Mirror • Mobile & PC compatible</div>
+                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Direct Fast Stream 2 (VidSrc 1080p/720p)</div>
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">VidSrc CDN Gateway • Mobile & PC Ready</div>
                         </div>
                     </div>
-                    <span class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: var(--fs-2xs);">Download</span>
+                    <span class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: var(--fs-2xs);">Direct Link</span>
                 </a>
 
-                <!-- Magnet / Torrent Search Option -->
-                <a class="download-option-card" id="downloadTorrentLink" target="_blank" rel="noopener noreferrer">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <span style="font-size: 1.3rem;">🧲</span>
-                        <div>
-                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Magnet & Torrent Original (4K / 1080p BluRay)</div>
-                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Opens in uTorrent, qBittorrent, Flud or LibreTorrent</div>
-                        </div>
+                <!-- Dynamic 1-Click Torrent & Magnet File Downloads -->
+                <div id="directTorrentsSection" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: var(--fs-xs); font-weight: 600; color: #fff; display: flex; align-items: center; gap: 0.4rem;">
+                            <span>🧲</span> Direct 1-Click Torrent / Magnet Files
+                        </span>
+                        <span id="torrentSearchStatus" style="font-size: var(--fs-2xs); color: var(--primary-cyan);">Checking mirrors...</span>
                     </div>
-                    <span class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: var(--fs-2xs);">Find Magnet</span>
-                </a>
+                    <div id="directTorrentButtons" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <!-- Dynamically filled with 1080p, 720p, 4K download buttons -->
+                    </div>
+                </div>
 
                 <!-- Subtitles Option -->
                 <a class="download-option-card" id="downloadSubtitlesLink" target="_blank" rel="noopener noreferrer">

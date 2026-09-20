@@ -73,16 +73,22 @@ let partyState = {
     dbRoomRef: null
 };
 
-const DEFAULT_FIREBASE_CONFIG = (typeof window !== "undefined" && window.FIREBASE_CONFIG) ? window.FIREBASE_CONFIG : {
-    apiKey: "AIzaSyDsFLdaHNTjSNbO2fi4W5HvNQKyIfQy2no",
-    authDomain: "shop-1e207.firebaseapp.com",
-    databaseURL: "https://shop-1e207-default-rtdb.firebaseio.com",
-    projectId: "shop-1e207",
-    storageBucket: "shop-1e207.firebasestorage.app",
-    messagingSenderId: "123370597498",
-    appId: "1:123370597498:web:527b50fb6858d64d2edfc3",
-    measurementId: "G-4J40C28S58"
-};
+function getFirebaseConfig() {
+    return (typeof window !== "undefined" && window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey) 
+        ? window.FIREBASE_CONFIG 
+        : ((typeof window !== "undefined" && window.ENV) ? {
+            apiKey: window.ENV.FIREBASE_API_KEY || "",
+            authDomain: window.ENV.FIREBASE_AUTH_DOMAIN || "",
+            databaseURL: window.ENV.FIREBASE_DATABASE_URL || "",
+            projectId: window.ENV.FIREBASE_PROJECT_ID || "",
+            storageBucket: window.ENV.FIREBASE_STORAGE_BUCKET || "",
+            messagingSenderId: window.ENV.FIREBASE_MESSAGING_SENDER_ID || "",
+            appId: window.ENV.FIREBASE_APP_ID || "",
+            measurementId: window.ENV.FIREBASE_MEASUREMENT_ID || ""
+        } : {});
+}
+
+const DEFAULT_FIREBASE_CONFIG = getFirebaseConfig();
 
 // Initialize Profile on page load
 document.addEventListener("DOMContentLoaded", () => {

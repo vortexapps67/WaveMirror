@@ -2,7 +2,7 @@
 
 const TMDB_API_KEY = (typeof window !== "undefined" && window.ENV && window.ENV.TMDB_API_KEY) 
     ? window.ENV.TMDB_API_KEY 
-    : "fea469f5e20796590292a227a92a2fef"; // TMDB API Key from env
+    : ""; // Dynamically loaded from .env
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMG_POSTER = "https://image.tmdb.org/t/p/w500";
 const TMDB_IMG_BACKDROP = "https://image.tmdb.org/t/p/original";

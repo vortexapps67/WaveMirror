@@ -1024,7 +1024,7 @@ function handleImportWatchlist(event) {
     reader.readAsText(file);
 }
 
-/* ---------------- Reviews & Local Moderation System ---------------- */
+/* ---------------- Reviews & Firebase Realtime Moderation System ---------------- */
 const REVIEWS_KEY = "wavemirror_reviews";
 
 function initReviewsDatabase() {
@@ -1081,6 +1081,14 @@ function saveReview(review) {
         const reviews = getReviews();
         reviews.unshift(review);
         localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews));
+
+        // Sync with Firebase Realtime Database
+        const db = initAdminFirebase();
+        if (db) {
+            db.ref("reviews/" + review.id).set(review).catch(err => {
+                console.warn("Firebase review push notice:", err);
+            });
+        }
     } catch (e) {
         console.error("Error saving review:", e);
     }
@@ -1444,11 +1452,129 @@ function updateGitHubSyncStatus(state, msg) {
     }
 }
 
-/* ---------------- Cloud Backend Realtime Sync Engine ---------------- */
+/* ---------------- Firebase Realtime Database & Cloud Sync Engine ---------------- */
+let adminFirebaseDb = null;
+let adminFirebaseInitialized = false;
+
+function initAdminFirebase() {
+    if (adminFirebaseInitialized && adminFirebaseDb) return adminFirebaseDb;
+    if (typeof firebase !== "undefined") {
+        try {
+            const config = (typeof window !== "undefined" && window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey)
+                ? window.FIREBASE_CONFIG
+                : (typeof window !== "undefined" && window.ENV ? {
+                    apiKey: window.ENV.FIREBASE_API_KEY,
+                    authDomain: window.ENV.FIREBASE_AUTH_DOMAIN,
+                    databaseURL: window.ENV.FIREBASE_DATABASE_URL,
+                    projectId: window.ENV.FIREBASE_PROJECT_ID,
+                    storageBucket: window.ENV.FIREBASE_STORAGE_BUCKET,
+                    messagingSenderId: window.ENV.FIREBASE_MESSAGING_SENDER_ID,
+                    appId: window.ENV.FIREBASE_APP_ID,
+                    measurementId: window.ENV.FIREBASE_MEASUREMENT_ID
+                } : null);
+
+            if (config && config.apiKey && config.databaseURL) {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(config);
+                }
+                adminFirebaseDb = firebase.database();
+                adminFirebaseInitialized = true;
+                
+                listenToFirebaseAdminSettings();
+                listenToFirebaseReviews();
+                return adminFirebaseDb;
+            }
+        } catch (e) {
+            console.warn("Firebase Admin SDK init notice:", e);
+        }
+    }
+    return null;
+}
+
+function listenToFirebaseAdminSettings() {
+    if (!adminFirebaseDb) return;
+    try {
+        adminFirebaseDb.ref("settings").on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data && typeof data === "object") {
+                applyCloudSettingsData(data, "Firebase Realtime DB");
+                updateBackendSyncStatus("synced", `🟢 Firebase Live Synced (${new Date().toLocaleTimeString()})`);
+            }
+        });
+    } catch (e) {
+        console.warn("Firebase settings listener error:", e);
+    }
+}
+
+function listenToFirebaseReviews() {
+    if (!adminFirebaseDb) return;
+    try {
+        adminFirebaseDb.ref("reviews").on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                let reviewsList = [];
+                if (Array.isArray(data)) {
+                    reviewsList = data.filter(Boolean);
+                } else if (typeof data === "object") {
+                    reviewsList = Object.keys(data).map(k => ({ ...data[k], id: data[k].id || k }));
+                }
+                if (reviewsList.length > 0) {
+                    localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviewsList));
+                    if (activeMovie) {
+                        loadReviewsForMedia(activeMovie.id);
+                    }
+                    const adminModal = document.getElementById("adminPanelModal");
+                    if (adminModal && adminModal.classList.contains("active")) {
+                        loadAdminReviews();
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.warn("Firebase reviews listener error:", e);
+    }
+}
+
+function applyCloudSettingsData(data, source = "Cloud") {
+    if (!data || typeof data !== "object") return;
+    if (data.appName) {
+        localStorage.setItem("wavemirror_custom_app_name", data.appName);
+        applyAppBranding(data.appName);
+    }
+    if (data.apkUrl) {
+        localStorage.setItem("wavemirror_custom_apk_url", data.apkUrl);
+    }
+    if (data.baseDownloadCount !== undefined) {
+        localStorage.setItem("wavemirror_base_download_count", data.baseDownloadCount);
+        localStorage.setItem("wavemirror_download_count", data.baseDownloadCount);
+        updateDownloadCounterDisplay(parseInt(data.baseDownloadCount) + totalGitHubDownloads);
+    }
+    if (data.igHandle) {
+        localStorage.setItem("wavemirror_custom_ig", data.igHandle);
+        applyIgBranding(data.igHandle);
+    }
+    if (data.githubRepo) {
+        localStorage.setItem("wavemirror_github_repo", data.githubRepo);
+    }
+    if (data.announcement) {
+        localStorage.setItem("wavemirror_announcement", JSON.stringify(data.announcement));
+        applyAnnouncement(data.announcement);
+    }
+}
+
 async function syncBackendSettings() {
+    // 1. First initialize Firebase Realtime Database SDK listeners
+    const db = initAdminFirebase();
+    if (db) {
+        updateBackendSyncStatus("synced", "🟢 Firebase Realtime Sync Active");
+        return;
+    }
+
+    // 2. Fallback to REST API if Firebase SDK is loading
     const endpoint = getCloudEndpoint();
-    updateBackendSyncStatus("syncing", "Connecting to Cloud Backend...");
-    
+    if (!endpoint) return;
+
+    updateBackendSyncStatus("syncing", "Connecting to Firebase REST Backend...");
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
@@ -1463,36 +1589,13 @@ async function syncBackendSettings() {
         if (res.ok) {
             const data = await res.json();
             if (data && typeof data === "object") {
-                if (data.appName) {
-                    localStorage.setItem("wavemirror_custom_app_name", data.appName);
-                    applyAppBranding(data.appName);
-                }
-                if (data.apkUrl) {
-                    localStorage.setItem("wavemirror_custom_apk_url", data.apkUrl);
-                }
-                if (data.baseDownloadCount !== undefined) {
-                    localStorage.setItem("wavemirror_base_download_count", data.baseDownloadCount);
-                    localStorage.setItem("wavemirror_download_count", data.baseDownloadCount);
-                    updateDownloadCounterDisplay(parseInt(data.baseDownloadCount) + totalGitHubDownloads);
-                }
-                if (data.igHandle) {
-                    localStorage.setItem("wavemirror_custom_ig", data.igHandle);
-                    applyIgBranding(data.igHandle);
-                }
-                if (data.githubRepo) {
-                    localStorage.setItem("wavemirror_github_repo", data.githubRepo);
-                }
-                if (data.announcement) {
-                    localStorage.setItem("wavemirror_announcement", JSON.stringify(data.announcement));
-                    applyAnnouncement(data.announcement);
-                }
-                
+                applyCloudSettingsData(data, "Firebase REST");
                 const timeStr = data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : new Date().toLocaleTimeString();
-                updateBackendSyncStatus("synced", `🟢 Connected to Cloud Backend (Last updated: ${timeStr})`);
+                updateBackendSyncStatus("synced", `🟢 Connected to Firebase (Last updated: ${timeStr})`);
                 return data;
             }
         }
-        updateBackendSyncStatus("offline", "Cloud Backend active (Local storage fallback)");
+        updateBackendSyncStatus("offline", "Firebase active (Local storage fallback)");
     } catch (e) {
         console.warn("Cloud backend sync notice:", e.message);
         updateBackendSyncStatus("offline", "Local Mode (Offline / Cache Active)");
@@ -1501,22 +1604,33 @@ async function syncBackendSettings() {
 
 async function testBackendConnection() {
     const endpoint = document.getElementById("adminBackendEndpointInput")?.value.trim() || getCloudEndpoint();
-    showToast("⚡ Pinging Cloud Backend...");
+    showToast("⚡ Pinging Firebase Backend...");
     updateBackendSyncStatus("syncing", "Testing endpoint latency...");
     
     const startTime = Date.now();
     try {
+        // Try Firebase SDK ping first
+        const db = initAdminFirebase();
+        if (db) {
+            await db.ref(".info/connected").once("value");
+            const latency = Date.now() - startTime;
+            updateBackendSyncStatus("synced", `🟢 Firebase SDK Ping OK! (${latency}ms)`);
+            showToast(`🔥 Firebase Realtime DB Connected! Latency: ${latency}ms`);
+            return;
+        }
+
+        // REST ping fallback
         const res = await fetch(endpoint, {
             method: "GET",
             headers: { "Accept": "application/json" }
         });
         const latency = Date.now() - startTime;
         if (res.ok) {
-            updateBackendSyncStatus("synced", `🟢 Ping OK! Status: ${res.status} (${latency}ms)`);
-            showToast(`✅ Cloud Backend Connected! Latency: ${latency}ms`);
+            updateBackendSyncStatus("synced", `🟢 REST Ping OK! Status: ${res.status} (${latency}ms)`);
+            showToast(`✅ Firebase REST Connected! Latency: ${latency}ms`);
         } else {
             updateBackendSyncStatus("offline", `Backend responded with HTTP ${res.status}`);
-            showToast(`⚠️ Cloud response status: ${res.status}`);
+            showToast(`⚠️ Firebase response status: ${res.status}`);
         }
     } catch (err) {
         updateBackendSyncStatus("offline", `Connection error: ${err.message}`);
@@ -1530,7 +1644,7 @@ function updateBackendSyncStatus(state, msg) {
     if (badge) {
         badge.className = `sync-status-badge ${state}`;
         if (state === "synced") {
-            badge.innerText = "🟢 Cloud Active";
+            badge.innerText = "🟢 Firebase Active";
         } else if (state === "syncing") {
             badge.innerText = "🔄 Syncing...";
         } else {
@@ -1588,7 +1702,7 @@ async function saveAdminCustomSettings() {
     localStorage.setItem("wavemirror_announcement", JSON.stringify(announcementObj));
     applyAnnouncement(announcementObj);
 
-    // Save payload to Cloud Backend REST API
+    // Save payload
     const payload = {
         appName: nameInput || "WaveMirror",
         apkUrl: apkInput || localStorage.getItem("wavemirror_custom_apk_url") || "app/build/outputs/apk/release/app-release.apk",
@@ -1599,28 +1713,45 @@ async function saveAdminCustomSettings() {
         lastUpdated: new Date().toISOString()
     };
 
-    updateBackendSyncStatus("syncing", "Broadcasting settings to cloud backend...");
-    showToast("💾 Saving locally & syncing to Cloud Backend...");
+    updateBackendSyncStatus("syncing", "Broadcasting settings to Firebase...");
+    showToast("💾 Saving locally & syncing to Firebase...");
 
-    const targetEndpoint = endpointInput || getCloudEndpoint();
-    try {
-        const res = await fetch(targetEndpoint, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-        
-        if (res.ok) {
-            updateBackendSyncStatus("synced", `🟢 Globally Synced! (${new Date().toLocaleTimeString()})`);
-            showToast("✅ Settings synced worldwide to Cloud Backend!");
-        } else {
-            updateBackendSyncStatus("offline", `Saved locally (Cloud HTTP ${res.status})`);
-            showToast("Saved locally. Backend response: HTTP " + res.status);
+    // 1. Try Firebase Realtime Database SDK write
+    const db = initAdminFirebase();
+    if (db) {
+        try {
+            await db.ref("settings").set(payload);
+            updateBackendSyncStatus("synced", `🟢 Firebase Synced! (${new Date().toLocaleTimeString()})`);
+            showToast("🔥 Settings synced worldwide via Firebase Realtime DB!");
+            syncGitHubDownloadsAndReleases(true);
+            return;
+        } catch (fbErr) {
+            console.warn("Firebase SDK save failed, trying REST:", fbErr);
         }
-    } catch (err) {
-        console.warn("Backend save error:", err);
-        updateBackendSyncStatus("offline", "Saved locally (Offline mode)");
-        showToast("✅ Saved locally to device storage.");
+    }
+
+    // 2. REST API write fallback
+    const targetEndpoint = endpointInput || getCloudEndpoint();
+    if (targetEndpoint) {
+        try {
+            const res = await fetch(targetEndpoint, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            
+            if (res.ok) {
+                updateBackendSyncStatus("synced", `🟢 Globally Synced! (${new Date().toLocaleTimeString()})`);
+                showToast("✅ Settings synced worldwide via Firebase REST!");
+            } else {
+                updateBackendSyncStatus("offline", `Saved locally (HTTP ${res.status})`);
+                showToast("Saved locally. Backend response: HTTP " + res.status);
+            }
+        } catch (err) {
+            console.warn("Backend save error:", err);
+            updateBackendSyncStatus("offline", "Saved locally (Offline mode)");
+            showToast("✅ Saved locally to device storage.");
+        }
     }
     
     // Refresh GitHub Releases with updated repo
@@ -1694,18 +1825,25 @@ function moderateReview(reviewId, action) {
         let reviews = getReviews();
         const review = reviews.find(r => r.id === reviewId);
         if (review) {
-            if (action === "approve") {
-                review.status = "approved";
-                showToast("Review approved and published!");
-            } else {
-                review.status = "rejected";
-                showToast("Review rejected.");
-            }
+            const newStatus = (action === "approve") ? "approved" : "rejected";
+            review.status = newStatus;
             localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews));
             loadAdminReviews();
             
             if (activeMovie && String(activeMovie.id) === String(review.mediaId)) {
                 loadReviewsForMedia(activeMovie.id);
+            }
+
+            // Sync with Firebase Realtime Database
+            const db = initAdminFirebase();
+            if (db) {
+                db.ref("reviews/" + reviewId).update({ status: newStatus }).then(() => {
+                    showToast(action === "approve" ? "🔥 Review approved on Firebase!" : "Review rejected on Firebase.");
+                }).catch(() => {
+                    showToast(action === "approve" ? "Review approved locally." : "Review rejected.");
+                });
+            } else {
+                showToast(action === "approve" ? "Review approved and published!" : "Review rejected.");
             }
         }
     } catch (e) {

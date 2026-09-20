@@ -1214,7 +1214,7 @@ function checkAdminPassword() {
 
         if (appNameInput) appNameInput.value = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
         if (apkUrlInput) apkUrlInput.value = localStorage.getItem("wavemirror_custom_apk_url") || "app/build/outputs/apk/release/app-release.apk";
-        if (countInput) countInput.value = localStorage.getItem("wavemirror_base_download_count") || localStorage.getItem("wavemirror_download_count") || "58490";
+        if (countInput) countInput.value = localStorage.getItem("wavemirror_base_download_count") || "";
         if (igInput) igInput.value = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
         if (ghRepoInput) ghRepoInput.value = localStorage.getItem("wavemirror_github_repo") || "vortexapps67/WaveMirror";
         if (backendEndpointInput) backendEndpointInput.value = getCloudEndpoint();
@@ -1245,7 +1245,8 @@ function getCloudEndpoint() {
 function loadCustomAppSettings() {
     const customName = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
     const customIg = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
-    const baseCount = parseInt(localStorage.getItem("wavemirror_base_download_count")) || parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
+    const customBase = localStorage.getItem("wavemirror_base_download_count");
+    const baseCount = (customBase !== null && customBase !== undefined && customBase !== "" && !isNaN(parseInt(customBase))) ? parseInt(customBase) : 0;
 
     applyAppBranding(customName);
     applyIgBranding(customIg);
@@ -1319,12 +1320,12 @@ async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
     const cacheKey = `wavemirror_gh_cache_${repo}`;
     const cacheTimeKey = `wavemirror_gh_cache_time_${repo}`;
     
-    // Check local cache (valid for 5 minutes unless forced)
+    // Check local cache (valid for 30 seconds unless forced)
     const cachedData = localStorage.getItem(cacheKey);
     const cachedTime = localStorage.getItem(cacheTimeKey);
     const now = Date.now();
     
-    if (!forceRefresh && cachedData && cachedTime && (now - parseInt(cachedTime)) < 5 * 60 * 1000) {
+    if (!forceRefresh && cachedData && cachedTime && (now - parseInt(cachedTime)) < 30 * 1000) {
         try {
             const data = JSON.parse(cachedData);
             currentGitHubReleaseData = data;
@@ -1366,7 +1367,7 @@ async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
                     if (release.assets && Array.isArray(release.assets)) {
                         release.assets.forEach(asset => {
                             if (asset.download_count) {
-                                totalDownloads += asset.download_count;
+                                totalDownloads += Number(asset.download_count);
                             }
                             const sizeMb = asset.size ? (asset.size / (1024 * 1024)).toFixed(2) : null;
                             const isApk = asset.browser_download_url && asset.browser_download_url.endsWith(".apk");
@@ -1437,11 +1438,11 @@ async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
 
 function applyGitHubReleaseData(data) {
     if (!data) return;
-    totalGitHubDownloads = data.totalDownloads || 0;
+    totalGitHubDownloads = Number(data.totalDownloads) || 0;
     if (data.latestTag) latestReleaseTag = data.latestTag;
     
-    const baseCount = parseInt(localStorage.getItem("wavemirror_base_download_count")) || 
-                      parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
+    const customBase = localStorage.getItem("wavemirror_base_download_count");
+    const baseCount = (customBase !== null && customBase !== undefined && customBase !== "" && !isNaN(parseInt(customBase))) ? parseInt(customBase) : 0;
     const combinedCount = baseCount + totalGitHubDownloads;
     
     updateDownloadCounterDisplay(combinedCount);
@@ -1488,7 +1489,8 @@ function openReleaseNotesModal() {
     const data = currentGitHubReleaseData || {};
     const tag = data.latestTag || latestReleaseTag || "v1.0.1";
     const size = data.apkSizeMb ? `${data.apkSizeMb} MB` : "5.31 MB";
-    const baseCount = parseInt(localStorage.getItem("wavemirror_base_download_count")) || 58490;
+    const customBase = localStorage.getItem("wavemirror_base_download_count");
+    const baseCount = (customBase !== null && customBase !== undefined && customBase !== "" && !isNaN(parseInt(customBase))) ? parseInt(customBase) : 0;
     const combined = baseCount + totalGitHubDownloads;
 
     const modalTag = document.getElementById("modalReleaseTag");
@@ -1804,10 +1806,13 @@ async function saveAdminCustomSettings() {
     applyAnnouncement(announcementObj);
 
     // Save payload
+    const parsedBaseCount = parseInt(countInput);
+    const validBaseCount = (!isNaN(parsedBaseCount) && parsedBaseCount >= 0) ? parsedBaseCount : (parseInt(localStorage.getItem("wavemirror_base_download_count")) || 0);
+    
     const payload = {
         appName: nameInput || "WaveMirror",
         apkUrl: apkInput || localStorage.getItem("wavemirror_custom_apk_url") || "app/build/outputs/apk/release/app-release.apk",
-        baseDownloadCount: parseInt(countInput) || parseInt(localStorage.getItem("wavemirror_base_download_count")) || 58490,
+        baseDownloadCount: validBaseCount,
         igHandle: igInput || "@vortex.apps",
         githubRepo: ghRepoInput || "vortexapps67/WaveMirror",
         announcement: announcementObj,
@@ -1860,14 +1865,22 @@ async function saveAdminCustomSettings() {
 }
 
 function downloadAppApk() {
-    let currentCount = parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
-    currentCount++;
-    localStorage.setItem("wavemirror_download_count", currentCount);
-    updateDownloadCounterDisplay(currentCount + totalGitHubDownloads);
+    const customBase = localStorage.getItem("wavemirror_base_download_count");
+    let baseCount = (customBase !== null && customBase !== undefined && customBase !== "" && !isNaN(parseInt(customBase))) ? parseInt(customBase) : 0;
+    baseCount++;
+    localStorage.setItem("wavemirror_base_download_count", baseCount);
+    updateDownloadCounterDisplay(baseCount + totalGitHubDownloads);
 
     const apkUrl = localStorage.getItem("wavemirror_custom_apk_url") || latestApkDownloadUrl || "app/build/outputs/apk/release/app-release.apk";
     const appName = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
     showToast(`⬇️ Starting ${appName} Android APK Download...`);
+
+    // Sync direct download click count to Firebase if connected
+    if (adminFirebaseDb) {
+        try {
+            adminFirebaseDb.ref("downloads/web_count").transaction(c => (c || 0) + 1);
+        } catch (e) {}
+    }
 
     if (window.WaveMirrorNative && window.WaveMirrorNative.downloadMedia) {
         window.WaveMirrorNative.downloadMedia(apkUrl, `${appName}-Android.apk`);

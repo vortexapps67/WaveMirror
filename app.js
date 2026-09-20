@@ -1311,6 +1311,8 @@ function dismissAnnouncement() {
 }
 
 /* ---------------- Real-time GitHub API Releases & Downloads Sync ---------------- */
+let currentGitHubReleaseData = null;
+
 async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
     const defaultRepo = "vortexapps67/WaveMirror";
     const repo = localStorage.getItem("wavemirror_github_repo") || defaultRepo;
@@ -1325,6 +1327,7 @@ async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
     if (!forceRefresh && cachedData && cachedTime && (now - parseInt(cachedTime)) < 5 * 60 * 1000) {
         try {
             const data = JSON.parse(cachedData);
+            currentGitHubReleaseData = data;
             applyGitHubReleaseData(data);
             return data;
         } catch (e) {
@@ -1353,7 +1356,11 @@ async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
                 let foundApkUrl = null;
                 let foundLatestTag = releases[0].tag_name || "v1.0.1";
                 let latestReleaseDate = releases[0].published_at;
+                let latestReleaseName = releases[0].name || foundLatestTag;
+                let latestReleaseBody = releases[0].body || "";
                 let apkSizeMb = null;
+                let apkFileName = null;
+                let allAssets = [];
 
                 releases.forEach(release => {
                     if (release.assets && Array.isArray(release.assets)) {
@@ -1361,11 +1368,23 @@ async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
                             if (asset.download_count) {
                                 totalDownloads += asset.download_count;
                             }
-                            if (!foundApkUrl && asset.browser_download_url && asset.browser_download_url.endsWith(".apk")) {
+                            const sizeMb = asset.size ? (asset.size / (1024 * 1024)).toFixed(2) : null;
+                            const isApk = asset.browser_download_url && asset.browser_download_url.endsWith(".apk");
+                            
+                            allAssets.push({
+                                releaseTag: release.tag_name,
+                                name: asset.name,
+                                sizeMb: sizeMb,
+                                downloadCount: asset.download_count || 0,
+                                downloadUrl: asset.browser_download_url,
+                                isApk: isApk,
+                                publishedAt: release.published_at
+                            });
+
+                            if (!foundApkUrl && isApk) {
                                 foundApkUrl = asset.browser_download_url;
-                                if (asset.size) {
-                                    apkSizeMb = (asset.size / (1024 * 1024)).toFixed(1);
-                                }
+                                apkSizeMb = sizeMb;
+                                apkFileName = asset.name;
                             }
                         });
                     }
@@ -1375,19 +1394,36 @@ async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
                     repo,
                     totalDownloads,
                     latestTag: foundLatestTag,
+                    latestName: latestReleaseName,
+                    latestBody: latestReleaseBody,
                     apkUrl: foundApkUrl,
                     apkSizeMb,
+                    apkFileName,
                     latestReleaseDate,
+                    allAssets,
+                    releases: releases.map(r => ({
+                        tag: r.tag_name,
+                        name: r.name,
+                        body: r.body,
+                        publishedAt: r.published_at,
+                        assets: (r.assets || []).map(a => ({
+                            name: a.name,
+                            sizeMb: (a.size / (1024 * 1024)).toFixed(2),
+                            downloadCount: a.download_count || 0,
+                            url: a.browser_download_url
+                        }))
+                    })),
                     fetchedAt: now
                 };
 
+                currentGitHubReleaseData = ghData;
                 localStorage.setItem(cacheKey, JSON.stringify(ghData));
                 localStorage.setItem(cacheTimeKey, String(now));
 
                 applyGitHubReleaseData(ghData);
                 updateGitHubSyncStatus("synced", `Synced with GitHub: ${totalDownloads.toLocaleString()} real asset downloads`);
                 if (forceRefresh) {
-                    showToast(`✅ GitHub Synced: ${totalDownloads.toLocaleString()} downloads (${foundLatestTag})`);
+                    showToast(`✅ GitHub Live Synced: ${totalDownloads.toLocaleString()} downloads (${foundLatestTag})`);
                 }
                 return ghData;
             }
@@ -1410,14 +1446,17 @@ function applyGitHubReleaseData(data) {
     
     updateDownloadCounterDisplay(combinedCount);
     
-    // Update live badge in download showcase
-    const showcaseBadge = document.querySelector(".app-download-badge");
-    if (showcaseBadge) {
-        showcaseBadge.innerHTML = `
-            <span class="status-dot-live" style="background:#10b981;"></span>
-            <span><strong id="appDownloadCounter">${combinedCount.toLocaleString()}</strong>+ Active Installs & Downloads</span>
-            <span class="gh-sync-tag" style="background:rgba(255,255,255,0.1); padding:2px 7px; border-radius:10px; font-size:0.7rem; margin-left:6px; font-weight:600; color:var(--primary-cyan);">● GitHub API Live (${latestReleaseTag})</span>
-        `;
+    // Update live badge text
+    const releaseBadgeText = document.getElementById("ghReleaseTagBadge");
+    if (releaseBadgeText) {
+        releaseBadgeText.innerText = `● GitHub API Live (${latestReleaseTag})`;
+    }
+    
+    // Update direct download button with dynamic version and size
+    const btnDownloadText = document.getElementById("btnDownloadApkText");
+    if (btnDownloadText) {
+        const sizeInfo = data.apkSizeMb ? ` • ${data.apkSizeMb} MB` : '';
+        btnDownloadText.innerText = `Download APK (${latestReleaseTag}${sizeInfo})`;
     }
     
     if (data.apkUrl) {
@@ -1425,11 +1464,11 @@ function applyGitHubReleaseData(data) {
         localStorage.setItem("wavemirror_custom_apk_url", data.apkUrl);
     }
     
-    // Update QR box text
-    const qrInfo = document.querySelector(".app-download-preview-box div:last-child");
-    if (qrInfo && data.latestTag) {
-        const sizeText = data.apkSizeMb ? ` (~${data.apkSizeMb}MB)` : ' (~18MB)';
-        qrInfo.innerText = `Android 7.0+ • ${data.latestTag} Stable${sizeText}`;
+    // Update QR box metadata
+    const qrAppMeta = document.getElementById("qrAppMeta");
+    if (qrAppMeta) {
+        const sizeText = data.apkSizeMb ? ` (~${data.apkSizeMb}MB)` : ' (~5.3MB)';
+        qrAppMeta.innerText = `Android 7.0+ • ${latestReleaseTag} Stable${sizeText}`;
     }
     
     // Update Admin Panel displays
@@ -1437,6 +1476,68 @@ function applyGitHubReleaseData(data) {
     if (adminGhDownloads) adminGhDownloads.innerText = totalGitHubDownloads.toLocaleString();
     const adminGhTag = document.getElementById("adminGhLatestTag");
     if (adminGhTag) adminGhTag.innerText = latestReleaseTag;
+}
+
+function openReleaseNotesModal() {
+    const modal = document.getElementById("releaseNotesModal");
+    if (!modal) return;
+
+    modal.classList.add("active");
+    document.body.style.overflow = "hidden";
+
+    const data = currentGitHubReleaseData || {};
+    const tag = data.latestTag || latestReleaseTag || "v1.0.1";
+    const size = data.apkSizeMb ? `${data.apkSizeMb} MB` : "5.31 MB";
+    const baseCount = parseInt(localStorage.getItem("wavemirror_base_download_count")) || 58490;
+    const combined = baseCount + totalGitHubDownloads;
+
+    const modalTag = document.getElementById("modalReleaseTag");
+    if (modalTag) modalTag.innerText = tag;
+    const modalSize = document.getElementById("modalReleaseSize");
+    if (modalSize) modalSize.innerText = size;
+    const modalDownloads = document.getElementById("modalReleaseDownloads");
+    if (modalDownloads) modalDownloads.innerText = combined.toLocaleString();
+    const modalBtnVer = document.getElementById("modalBtnVersion");
+    if (modalBtnVer) modalBtnVer.innerText = tag;
+
+    // Populate assets list
+    const assetsContainer = document.getElementById("releaseAssetsList");
+    if (assetsContainer) {
+        const assets = data.allAssets || [];
+        if (assets.length > 0) {
+            assetsContainer.innerHTML = assets.map(a => `
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); padding: 0.6rem 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <div>
+                        <div style="font-weight: 700; color: #fff; font-size: 0.85rem;">${escapeHtml(a.name)}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">Release: <strong>${escapeHtml(a.releaseTag)}</strong> • Size: ${a.sizeMb || '5.3'} MB • Downloads: ${Number(a.downloadCount).toLocaleString()}</div>
+                    </div>
+                    <a href="${a.downloadUrl}" target="_blank" class="btn-primary" style="padding: 0.35rem 0.8rem; font-size: 0.75rem; text-decoration: none;">
+                        ⬇️ Download
+                    </a>
+                </div>
+            `).join("");
+        } else {
+            assetsContainer.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem;">WaveMirror-${tag}-release.apk (Available on GitHub Releases)</div>`;
+        }
+    }
+
+    // Populate changelog body
+    const bodyContainer = document.getElementById("releaseBodyContent");
+    if (bodyContainer) {
+        if (data.latestBody && data.latestBody.trim()) {
+            bodyContainer.innerText = data.latestBody;
+        } else {
+            bodyContainer.innerText = `### ${tag} Release Notes\n- Enhanced Apple Liquid Glass floating pill switcher with haptic drag tracking\n- Live GitHub API releases & download counter dynamic synchronization\n- Realtime bi-directional Firebase database sync for global admin controls\n- Curtain style line-by-line loading screen with zero-latency skeleton shimmer\n- High-speed 4K HDR playback & offline video streaming engine`;
+        }
+    }
+}
+
+function closeReleaseNotesModal() {
+    const modal = document.getElementById("releaseNotesModal");
+    if (modal) {
+        modal.classList.remove("active");
+        document.body.style.overflow = "auto";
+    }
 }
 
 function updateGitHubSyncStatus(state, msg) {

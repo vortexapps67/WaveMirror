@@ -1650,7 +1650,7 @@ function togglePartyWatchlist() {
             id: partyState.activeMedia.id,
             title: partyState.activeMedia.title,
             type: partyState.activeMedia.type,
-            poster: "9dff5f12-e1c4-4575-81f4-5184844ca983.png",
+            poster: "wavemirror_new.png",
             rating: "8.5",
             year: new Date().getFullYear().toString()
         });

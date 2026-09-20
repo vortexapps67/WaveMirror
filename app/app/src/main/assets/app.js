@@ -1220,9 +1220,13 @@ function checkAdminPassword() {
         if (backendEndpointInput) backendEndpointInput.value = getCloudEndpoint();
 
         try {
-            const savedAnnounce = JSON.parse(localStorage.getItem("wavemirror_announcement") || "{}");
+            const rawAnnounce = localStorage.getItem("wavemirror_announcement");
+            const savedAnnounce = rawAnnounce ? JSON.parse(rawAnnounce) : {
+                enabled: true,
+                text: "🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback & Live Watch Party cloud sync active."
+            };
             if (announcementInput) announcementInput.value = savedAnnounce.text || "";
-            if (announcementToggle) announcementToggle.checked = Boolean(savedAnnounce.enabled);
+            if (announcementToggle) announcementToggle.checked = (savedAnnounce.enabled !== false);
         } catch (e) {}
 
         const adminGhDownloads = document.getElementById("adminGhDownloadsCount");
@@ -1253,9 +1257,19 @@ function loadCustomAppSettings() {
     updateDownloadCounterDisplay(baseCount + totalGitHubDownloads);
 
     try {
-        const savedAnnounce = JSON.parse(localStorage.getItem("wavemirror_announcement") || "{}");
+        const rawAnnounce = localStorage.getItem("wavemirror_announcement");
+        const defaultAnnounce = {
+            enabled: true,
+            text: "🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback & Live Watch Party cloud sync active."
+        };
+        const savedAnnounce = rawAnnounce ? JSON.parse(rawAnnounce) : defaultAnnounce;
         applyAnnouncement(savedAnnounce);
-    } catch (e) {}
+    } catch (e) {
+        applyAnnouncement({
+            enabled: true,
+            text: "🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback & Live Watch Party cloud sync active."
+        });
+    }
 
     // Asynchronously synchronize with Cloud Backend & GitHub Releases API
     syncBackendSettings();
@@ -1293,7 +1307,7 @@ function applyAnnouncement(announcement) {
     const textEl = document.getElementById("announcementText");
     if (!banner || !textEl) return;
 
-    if (announcement && announcement.enabled && announcement.text && announcement.text.trim()) {
+    if (announcement && announcement.enabled !== false && announcement.text && announcement.text.trim()) {
         textEl.innerText = announcement.text;
         banner.classList.remove("hidden");
         banner.style.display = "flex";

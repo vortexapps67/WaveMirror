@@ -92,6 +92,9 @@ async function initApp() {
 
     // Initialize mock reviews database
     initReviewsDatabase();
+
+    // Load custom app name, IG handle, and download count
+    loadCustomAppSettings();
 }
 
 function showLoader(show) {
@@ -409,7 +412,7 @@ function removeWatchlistItem(id) {
     }
 }
 
-/* ---------------- In-App Social Profile Modal (@_beat_labs) ---------------- */
+/* ---------------- In-App Social Profile Modal (@vortex.apps) ---------------- */
 function openSocialModal() {
     const modal = document.getElementById("socialModal");
     if (modal) modal.classList.add("active");
@@ -421,8 +424,9 @@ function closeSocialModal() {
 }
 
 function copyInstagramHandle() {
-    navigator.clipboard.writeText("@_beat_labs");
-    showToast("Instagram handle @_beat_labs copied to clipboard!");
+    const handle = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
+    navigator.clipboard.writeText(handle);
+    showToast(`Instagram handle ${handle} copied to clipboard!`);
 }
 
 /* ---------------- FAQ Accordion ---------------- */
@@ -1136,11 +1140,118 @@ function checkAdminPassword() {
     if (pass === "admin00") {
         document.getElementById("adminLoginSection").style.display = "none";
         document.getElementById("adminDashboardSection").style.display = "block";
+        
+        // Populate current custom app settings in admin inputs
+        const appNameInput = document.getElementById("adminAppNameInput");
+        const apkUrlInput = document.getElementById("adminApkUrlInput");
+        const countInput = document.getElementById("adminDownloadCountInput");
+        const igInput = document.getElementById("adminIgInput");
+
+        if (appNameInput) appNameInput.value = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
+        if (apkUrlInput) apkUrlInput.value = localStorage.getItem("wavemirror_custom_apk_url") || "app/app-release.apk";
+        if (countInput) countInput.value = localStorage.getItem("wavemirror_download_count") || "58490";
+        if (igInput) igInput.value = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
+
         loadAdminReviews();
         showToast("Access Granted. Welcome Admin.");
     } else {
         showToast("Invalid password! Access denied.");
     }
+}
+
+/* ---------------- Dynamic App Branding & Admin Customizer ---------------- */
+function loadCustomAppSettings() {
+    const customName = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
+    const customIg = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
+    const customDownloadCount = parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
+
+    applyAppBranding(customName);
+    applyIgBranding(customIg);
+    updateDownloadCounterDisplay(customDownloadCount);
+}
+
+function applyAppBranding(name) {
+    if (!name) return;
+    document.querySelectorAll(".brand-title").forEach(el => el.innerText = name);
+    document.querySelectorAll(".brand-name-target").forEach(el => el.innerText = name);
+    document.title = `${name} | Free Cinema & Series Streaming`;
+}
+
+function applyIgBranding(handle) {
+    if (!handle) return;
+    const clean = handle.startsWith("@") ? handle : `@${handle}`;
+    const navPill = document.getElementById("navIgHandle");
+    if (navPill) navPill.innerText = clean;
+    const modalTitle = document.getElementById("socialModalTitle");
+    if (modalTitle) modalTitle.innerText = clean;
+    const copyBtn = document.getElementById("socialCopyBtn");
+    if (copyBtn) copyBtn.innerText = `Copy Handle ${clean}`;
+    document.querySelectorAll(".footer-ig-handle").forEach(el => el.innerText = clean);
+}
+
+function updateDownloadCounterDisplay(count) {
+    const counter = document.getElementById("appDownloadCounter");
+    if (counter) {
+        counter.innerText = Number(count).toLocaleString();
+    }
+}
+
+function downloadAppApk() {
+    let currentCount = parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
+    currentCount++;
+    localStorage.setItem("wavemirror_download_count", currentCount);
+    updateDownloadCounterDisplay(currentCount);
+
+    const apkUrl = localStorage.getItem("wavemirror_custom_apk_url") || "app/app-release.apk";
+    const appName = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
+    showToast(`⬇️ Starting ${appName} Android APK Download...`);
+
+    if (window.WaveMirrorNative && window.WaveMirrorNative.downloadMedia) {
+        window.WaveMirrorNative.downloadMedia(apkUrl, `${appName}-Android.apk`);
+    } else {
+        const link = document.createElement("a");
+        link.href = apkUrl;
+        link.setAttribute("download", `${appName}-Android.apk`);
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+}
+
+function openMirrorDownload() {
+    showToast("⚡ Opening Fast Mirror APK Server...");
+    const apkUrl = localStorage.getItem("wavemirror_custom_apk_url") || "https://github.com/beatlabs790/WaveMirror/releases/latest";
+    window.open(apkUrl, "_blank");
+}
+
+function saveAdminCustomSettings() {
+    const nameInput = document.getElementById("adminAppNameInput")?.value.trim();
+    const apkInput = document.getElementById("adminApkUrlInput")?.value.trim();
+    const countInput = document.getElementById("adminDownloadCountInput")?.value;
+    const igInput = document.getElementById("adminIgInput")?.value.trim();
+
+    if (nameInput) {
+        localStorage.setItem("wavemirror_custom_app_name", nameInput);
+        applyAppBranding(nameInput);
+    }
+    if (apkInput) {
+        localStorage.setItem("wavemirror_custom_apk_url", apkInput);
+    }
+    if (countInput) {
+        const countNum = parseInt(countInput);
+        if (!isNaN(countNum)) {
+            localStorage.setItem("wavemirror_download_count", countNum);
+            updateDownloadCounterDisplay(countNum);
+        }
+    }
+    if (igInput) {
+        const cleanIg = igInput.startsWith("@") ? igInput : `@${igInput}`;
+        localStorage.setItem("wavemirror_custom_ig", cleanIg);
+        applyIgBranding(cleanIg);
+    }
+
+    showToast("✅ App Branding & Settings successfully updated!");
 }
 
 function loadAdminReviews() {

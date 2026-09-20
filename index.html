@@ -53,7 +53,7 @@
                 <li><a class="nav-link" onclick="scrollToSection('explore')">Explore</a></li>
                 <li class="nav-item-optional"><a class="nav-link" onclick="scrollToSection('series')">TV Series</a></li>
                 <li class="nav-item-optional"><a class="nav-link" onclick="scrollToSection('upcoming')">Upcoming</a></li>
-                <li class="nav-item-optional"><a class="nav-link" onclick="scrollToSection('free-pass')">Free Pass</a></li>
+                <li class="nav-item-optional"><a class="nav-link" onclick="scrollToSection('download-app')">Get App 📱</a></li>
             </ul>
         </div>
 
@@ -81,7 +81,7 @@
             <!-- In-App Instagram Profile Modal Toggle -->
             <button class="social-pill" onclick="openSocialModal()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                <span>@_beat_labs</span>
+                <span id="navIgHandle">@vortex.apps</span>
             </button>
 
             <!-- Watchlist Drawer Button -->
@@ -230,31 +230,44 @@
                     </div>
                 </section>
 
-                <!-- 100% Free Pass Section -->
-                <section id="free-pass" style="margin-bottom: 3.5rem;">
-                    <div class="section-header" style="text-align: center; display: block;">
-                        <h2 class="section-title" style="justify-content: center;">WaveMirror 100% Free Access</h2>
-                        <p class="section-subtitle">No payment, credit cards, or registration required. Stream everything free forever.</p>
-                    </div>
-                    <div class="vip-grid">
-                        <div class="vip-card">
-                            <h3 style="font-family: var(--font-heading);">Instant Free Pass</h3>
-                            <div class="price-tag">$0.00</div>
-                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Full 1080p & 4K Streaming<br>Zero Ads & No Credit Card<br>Unlimited Titles</p>
-                            <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="showToast('Instant Free Pass Active!')">Active Free Plan</button>
+                <!-- Download Native App Showcase Section -->
+                <section id="download-app" class="app-download-showcase">
+                    <div class="app-download-content">
+                        <div>
+                            <div class="app-download-badge">
+                                <span>🔥</span>
+                                <span><strong id="appDownloadCounter">58,490</strong>+ Active Android Installs</span>
+                            </div>
+                            <h2 class="app-download-title">Download the <span class="brand-name-target">WaveMirror</span> Android App</h2>
+                            <p class="app-download-subtitle">Experience high-speed 4K HDR playback, 1-click direct MP4 downloads, offline caching, and built-in ad shield protection directly on your phone and TV.</p>
+                            
+                            <div class="app-download-features">
+                                <div class="app-download-feat-pill">🛡️ Zero Ads & Popups</div>
+                                <div class="app-download-feat-pill">⚡ 0ms Offline Launch</div>
+                                <div class="app-download-feat-pill">🎬 6 Stream Servers</div>
+                                <div class="app-download-feat-pill">📡 Chromecast Ready</div>
+                                <div class="app-download-feat-pill">⬇️ Direct MP4 Downloader</div>
+                            </div>
+
+                            <div class="app-download-cta-row">
+                                <button class="btn-primary" style="padding: 0.85rem 1.6rem; font-size: 1rem;" onclick="downloadAppApk()">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    <span>Download APK (Direct)</span>
+                                </button>
+                                <button class="btn-secondary" style="padding: 0.85rem 1.3rem; font-size: 0.95rem;" onclick="openMirrorDownload()">
+                                    <span>⚡ Fast Mirror</span>
+                                </button>
+                            </div>
                         </div>
-                        <div class="vip-card featured">
-                            <span class="hero-tag">UNLOCKED FOR EVERYONE</span>
-                            <h3 style="font-family: var(--font-heading); margin-top: 0.5rem;">Free Ultra 4K</h3>
-                            <div class="price-tag">$0.00<span style="font-size: 0.9rem;">/forever</span></div>
-                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">4K HDR Sound<br>Unlimited Stream<br>Instant In-App Player<br>Multi-Device Support</p>
-                            <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="showToast('Free 4K Ultra Stream Mode Enabled!')">Stream 4K Free</button>
-                        </div>
-                        <div class="vip-card">
-                            <h3 style="font-family: var(--font-heading);">Free Lifetime</h3>
-                            <div class="price-tag">$0.00</div>
-                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Forever Free Access<br>All Future Releases<br>Community Built<br>No Paywalls</p>
-                            <button class="btn-secondary" style="width: 100%;" onclick="showToast('Free Lifetime Access Active!')">Enjoy Lifetime Free</button>
+
+                        <div class="app-download-preview-box">
+                            <div class="app-download-qr-badge">
+                                <svg viewBox="0 0 100 100" fill="#000" style="width: 100%; height: 100%;">
+                                    <path d="M10 10h30v30h-30z M15 15v20h20v-20z M22 22h6v6h-6z M60 10h30v30h-30z M65 15v20h20v-20z M72 22h6v6h-6z M10 60h30v30h-30z M15 65v20h20v-20z M22 72h6v6h-6z M45 10h10v10h-10z M45 25h10v10h-10z M45 40h10v10h-10z M10 45h10v10h-10z M25 45h10v10h-10z M60 45h10v10h-10z M75 45h10v10h-10z M90 45h10v10h-10z M45 55h10v10h-10z M45 70h10v10h-10z M45 85h10v10h-10z M60 60h15v10h-15z M80 60h10v10h-10z M60 75h10v15h-10z M75 75h15v15h-15z"/>
+                                </svg>
+                            </div>
+                            <div style="font-size: var(--fs-xs); font-weight: 700; color: #fff;">Scan to Install on Mobile</div>
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Android 7.0+ • v1.0.0 Stable (~18MB)</div>
                         </div>
                     </div>
                 </section>
@@ -747,8 +760,34 @@
             
             <!-- Dashboard Section -->
             <div id="adminDashboardSection" style="display: none;">
+                <!-- App Customizer Settings -->
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">⚙️ App Branding & Site Settings</h3>
+                    <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        <div>
+                            <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Application / Website Name</label>
+                            <input type="text" id="adminAppNameInput" placeholder="e.g. WaveMirror" style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.9rem; outline: none;">
+                        </div>
+                        <div>
+                            <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Android APK Download URL</label>
+                            <input type="text" id="adminApkUrlInput" placeholder="https://... or app/build/.../app-debug.apk" style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.9rem; outline: none;">
+                        </div>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <div style="flex: 1;">
+                                <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Base Downloads Count</label>
+                                <input type="number" id="adminDownloadCountInput" placeholder="58490" style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.9rem; outline: none;">
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Instagram Username</label>
+                                <input type="text" id="adminIgInput" placeholder="@vortex.apps" style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.9rem; outline: none;">
+                            </div>
+                        </div>
+                        <button class="btn-primary" style="justify-content: center; margin-top: 0.4rem;" onclick="saveAdminCustomSettings()">Save & Apply Changes</button>
+                    </div>
+                </div>
+
                 <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 1rem;">Pending Reviews Approval</h3>
-                <div id="adminReviewsList" style="max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
+                <div id="adminReviewsList" style="max-height: 280px; overflow-y: auto; padding-right: 0.5rem;">
                     <!-- Pending reviews populated by app.js -->
                 </div>
             </div>
@@ -762,19 +801,19 @@
             <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem; box-shadow: 0 0 25px rgba(220, 39, 67, 0.5);">
                 <svg width="42" height="42" viewBox="0 0 24 24" fill="#fff"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
             </div>
-            <h2 style="font-family: var(--font-heading); font-size: 1.6rem; color: #fff;">@_beat_labs</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0.4rem 0 1.5rem;">Official WaveMirror Creator & Audio Tech Labs</p>
+            <h2 id="socialModalTitle" style="font-family: var(--font-heading); font-size: 1.6rem; color: #fff;">@vortex.apps</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0.4rem 0 1.5rem;">Official WaveMirror Creator & Mobile App Engineering</p>
             <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem;">
                 <div style="background: rgba(255, 255, 255, 0.06); padding: 0.8rem 1.2rem; border-radius: var(--radius-sm);">
-                    <div style="font-weight: 800; font-size: 1.2rem; color: var(--primary-neon);">148K</div>
+                    <div style="font-weight: 800; font-size: 1.2rem; color: var(--primary-neon);">210K</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted);">FOLLOWERS</div>
                 </div>
                 <div style="background: rgba(255, 255, 255, 0.06); padding: 0.8rem 1.2rem; border-radius: var(--radius-sm);">
-                    <div style="font-weight: 800; font-size: 1.2rem; color: var(--primary-violet);">940+</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">RELEASE LABS</div>
+                    <div style="font-weight: 800; font-size: 1.2rem; color: var(--primary-violet);">1.2K+</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">APP RELEASES</div>
                 </div>
             </div>
-            <button class="btn-primary" style="width: 100%; justify-content: center;" onclick="copyInstagramHandle()">Copy Handle @_beat_labs</button>
+            <button class="btn-primary" id="socialCopyBtn" style="width: 100%; justify-content: center;" onclick="copyInstagramHandle()">Copy Handle @vortex.apps</button>
         </div>
     </div>
 
@@ -863,12 +902,12 @@
                     <li><a onclick="openTermsModal()">Terms of Use</a></li>
                     <li><a onclick="showToast('DMCA Policy: Content provided for indexing.')">DMCA Notice</a></li>
                     <li><a onclick="openAdminPanel()">Admin Moderation</a></li>
-                    <li><a onclick="openSocialModal()">Contact @_beat_labs</a></li>
+                    <li><a onclick="openSocialModal()">Contact <span class="footer-ig-handle">@vortex.apps</span></a></li>
                 </ul>
             </div>
         </div>
         <div class="footer-bottom">
-            <span>&copy; 2026 WaveMirror. 100% Free with Ad Shield. Powered by TMDB API & @_beat_labs.</span>
+            <span>&copy; 2026 <span class="brand-name-target">WaveMirror</span>. 100% Free with Ad Shield. Powered by TMDB API & <span class="footer-ig-handle">@vortex.apps</span>.</span>
             <span>v3.3 Native Stream Engine</span>
         </div>
     </footer>

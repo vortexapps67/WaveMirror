@@ -1007,25 +1007,28 @@
         </div>
     </div>
 
-    <!-- Mobile & Dedicated App Bottom Navigation Dock -->
+    <!-- Mobile & Dedicated App Floating Frosted Glass Pill Bottom Navigation Dock -->
     <div class="mobile-bottom-nav" id="appBottomNav">
-        <button class="mobile-nav-item active" id="tabNavHome" onclick="switchAppTab('home')">
+        <!-- Chromatic Liquid-Glass Sliding Pill Thumb -->
+        <div class="pill-slider-thumb" id="pillSliderThumb"></div>
+
+        <button class="mobile-nav-item active" id="tabNavHome" data-tab="home" onclick="switchAppTab('home')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>
             <label>Home</label>
         </button>
-        <button class="mobile-nav-item" id="tabNavMovies" onclick="switchAppTab('movies')">
+        <button class="mobile-nav-item" id="tabNavMovies" data-tab="movies" onclick="switchAppTab('movies')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
             <label>Movies</label>
         </button>
-        <button class="mobile-nav-item" id="tabNavSeries" onclick="switchAppTab('series')">
+        <button class="mobile-nav-item" id="tabNavSeries" data-tab="series" onclick="switchAppTab('series')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
             <label>Series</label>
         </button>
-        <button class="mobile-nav-item" id="tabNavDiscover" onclick="switchAppTab('discover')">
+        <button class="mobile-nav-item" id="tabNavDiscover" data-tab="discover" onclick="switchAppTab('discover')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
             <label>Discover</label>
         </button>
-        <button class="mobile-nav-item" id="tabNavLibrary" onclick="switchAppTab('library')">
+        <button class="mobile-nav-item" id="tabNavLibrary" data-tab="library" onclick="switchAppTab('library')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
             <label>Library</label>
         </button>

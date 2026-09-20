@@ -1661,11 +1661,14 @@ function switchAppTab(tabName) {
         }
     }
 
-    // Update Bottom Dock Active State
+    // Update Bottom Dock Active State & Slider Thumb Position
     const navItems = document.querySelectorAll(".mobile-bottom-nav .mobile-nav-item");
-    navItems.forEach(item => item.classList.remove("active"));
-    const activeNavBtn = document.getElementById(`tabNav${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
-    if (activeNavBtn) activeNavBtn.classList.add("active");
+    navItems.forEach(item => {
+        const itemTab = item.getAttribute("data-tab");
+        item.classList.toggle("active", itemTab === tabName);
+    });
+    
+    updatePillThumbPosition(tabName);
 
     // Smooth scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1680,6 +1683,137 @@ function switchAppTab(tabName) {
     } else if (tabName === "library") {
         renderLibraryView();
     }
+}
+
+// Update Frosted Glass Pill Slider Thumb Position
+function updatePillThumbPosition(tabName, immediate = false) {
+    const dock = document.getElementById("appBottomNav");
+    const thumb = document.getElementById("pillSliderThumb");
+    if (!dock || !thumb) return;
+
+    const activeBtn = dock.querySelector(`.mobile-nav-item[data-tab="${tabName}"]`) || dock.querySelector(".mobile-nav-item.active");
+    if (!activeBtn) return;
+
+    const dockRect = dock.getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    if (dockRect.width === 0 || btnRect.width === 0) return;
+
+    const targetX = btnRect.left - dockRect.left - 6;
+
+    if (immediate) {
+        thumb.style.transition = "none";
+        thumb.style.transform = `translate3d(${targetX}px, 0, 0)`;
+        void thumb.offsetWidth; // Force reflow
+        thumb.style.transition = "";
+    } else {
+        thumb.style.transform = `translate3d(${targetX}px, 0, 0)`;
+    }
+}
+
+// Initialize Interactive Hold & Slide Frosted Glass Floating Pill Dock
+function initPillDockSlider() {
+    const dock = document.getElementById("appBottomNav");
+    const thumb = document.getElementById("pillSliderThumb");
+    if (!dock || !thumb) return;
+
+    const tabs = ["home", "movies", "series", "discover", "library"];
+    const navItems = Array.from(dock.querySelectorAll(".mobile-nav-item"));
+
+    let isPointerDown = false;
+    let currentHoveredIndex = -1;
+    let animFrame = null;
+    let activePointerId = null;
+
+    // Set initial position after layout renders
+    setTimeout(() => updatePillThumbPosition(currentAppTab, true), 60);
+    window.addEventListener("resize", () => updatePillThumbPosition(currentAppTab, true), { passive: true });
+
+    function getIndexFromPointerX(clientX) {
+        const dockRect = dock.getBoundingClientRect();
+        const relativeX = clientX - dockRect.left - 6;
+        const availableWidth = dockRect.width - 12;
+        const slotWidth = availableWidth / tabs.length;
+        const rawIndex = Math.floor(relativeX / slotWidth);
+        return Math.max(0, Math.min(tabs.length - 1, rawIndex));
+    }
+
+    function calculateThumbX(clientX) {
+        const dockRect = dock.getBoundingClientRect();
+        const slotWidth = (dockRect.width - 12) / tabs.length;
+        const relativeX = clientX - dockRect.left - (slotWidth / 2);
+        const minX = 0;
+        const maxX = dockRect.width - 12 - slotWidth;
+        return Math.max(minX, Math.min(maxX, relativeX));
+    }
+
+    function onPointerDown(e) {
+        // Only primary button / touch
+        if (e.button && e.button !== 0) return;
+        isPointerDown = true;
+        activePointerId = e.pointerId;
+
+        if (dock.setPointerCapture && e.pointerId !== undefined) {
+            try { dock.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+
+        thumb.classList.add("is-dragging");
+        const thumbX = calculateThumbX(e.clientX);
+        thumb.style.setProperty("--drag-x", `${thumbX}px`);
+
+        currentHoveredIndex = getIndexFromPointerX(e.clientX);
+        navItems.forEach((btn, idx) => {
+            btn.classList.toggle("is-hovered", idx === currentHoveredIndex);
+        });
+
+        if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
+            try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
+        }
+    }
+
+    function onPointerMove(e) {
+        if (!isPointerDown) return;
+
+        if (animFrame) cancelAnimationFrame(animFrame);
+        animFrame = requestAnimationFrame(() => {
+            const thumbX = calculateThumbX(e.clientX);
+            thumb.style.setProperty("--drag-x", `${thumbX}px`);
+
+            const newHoveredIndex = getIndexFromPointerX(e.clientX);
+            if (newHoveredIndex !== currentHoveredIndex) {
+                currentHoveredIndex = newHoveredIndex;
+                navItems.forEach((btn, idx) => {
+                    btn.classList.toggle("is-hovered", idx === currentHoveredIndex);
+                });
+                if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
+                    try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
+                }
+            }
+        });
+    }
+
+    function onPointerUp(e) {
+        if (!isPointerDown) return;
+        isPointerDown = false;
+
+        if (dock.releasePointerCapture && activePointerId !== null) {
+            try { dock.releasePointerCapture(activePointerId); } catch (err) {}
+        }
+        activePointerId = null;
+
+        thumb.classList.remove("is-dragging");
+        navItems.forEach(btn => btn.classList.remove("is-hovered"));
+
+        const finalIndex = getIndexFromPointerX(e.clientX);
+        const selectedTab = tabs[finalIndex] || currentAppTab;
+
+        switchAppTab(selectedTab);
+    }
+
+    // Touch & Pointer Listeners
+    dock.addEventListener("pointerdown", onPointerDown);
+    dock.addEventListener("pointermove", onPointerMove, { passive: true });
+    dock.addEventListener("pointerup", onPointerUp);
+    dock.addEventListener("pointercancel", onPointerUp);
 }
 
 // Category Pill Handler
@@ -2021,8 +2155,10 @@ window.handleAndroidBack = function() {
     return false;
 };
 
-// Check and activate native app mode
+// Check and activate native app mode & initialize pill dock slider
 document.addEventListener("DOMContentLoaded", () => {
+    initPillDockSlider();
+
     if (window.WaveMirrorNative || navigator.userAgent.includes("WaveMirrorApp")) {
         document.body.classList.add("is-native-app");
         const logoBadge = document.querySelector(".brand-badge");

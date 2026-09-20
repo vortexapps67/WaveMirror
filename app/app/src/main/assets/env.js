@@ -5,15 +5,15 @@
     
     // Baseline environment defaults (sourced from .env)
     const DEFAULT_ENV = {
-        FIREBASE_API_KEY: "AIzaSyDsFLdaHNTjSNbO2fi4W5HvNQKyIfQy2no",
-        FIREBASE_AUTH_DOMAIN: "shop-1e207.firebaseapp.com",
-        FIREBASE_DATABASE_URL: "https://shop-1e207-default-rtdb.firebaseio.com",
-        FIREBASE_PROJECT_ID: "shop-1e207",
-        FIREBASE_STORAGE_BUCKET: "shop-1e207.firebasestorage.app",
-        FIREBASE_MESSAGING_SENDER_ID: "123370597498",
-        FIREBASE_APP_ID: "1:123370597498:web:527b50fb6858d64d2edfc3",
-        FIREBASE_MEASUREMENT_ID: "G-4J40C28S58",
-        WAVEMIRROR_CLOUD_ENDPOINT: "https://shop-1e207-default-rtdb.firebaseio.com/settings.json",
+        FIREBASE_API_KEY: "AIzaSyA0INROBS86Ch1OoWSxzikroI2tiC8DI-c",
+        FIREBASE_AUTH_DOMAIN: "vithal-d7cfb.firebaseapp.com",
+        FIREBASE_DATABASE_URL: "https://vithal-d7cfb-default-rtdb.firebaseio.com",
+        FIREBASE_PROJECT_ID: "vithal-d7cfb",
+        FIREBASE_STORAGE_BUCKET: "vithal-d7cfb.firebasestorage.app",
+        FIREBASE_MESSAGING_SENDER_ID: "504015060977",
+        FIREBASE_APP_ID: "1:504015060977:web:303d71aa9d5c4f8c740e50",
+        FIREBASE_MEASUREMENT_ID: "G-93JSYBCTRN",
+        WAVEMIRROR_CLOUD_ENDPOINT: "https://vithal-d7cfb-default-rtdb.firebaseio.com/settings.json",
         TMDB_API_KEY: "fea469f5e20796590292a227a92a2fef"
     };
 

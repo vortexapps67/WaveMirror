@@ -125,13 +125,19 @@
         </div>
     </header>
 
-    <!-- Global Cloud-Synced Announcement Banner -->
-    <div id="globalAnnouncementBanner" class="announcement-banner">
-        <div class="announcement-inner">
-            <span class="announcement-pill">📢 LIVE UPDATE</span>
-            <span id="announcementText" class="announcement-msg">🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback & Live Watch Party cloud sync active.</span>
+    <!-- Global Cloud-Synced Announcement Ticker -->
+    <div id="globalAnnouncementBanner" class="announcement-ticker" role="region" aria-label="Announcement Ticker">
+        <div class="ticker-badge">
+            <span class="ticker-dot"></span>
+            <span>LIVE UPDATE</span>
         </div>
-        <button class="announcement-close" onclick="dismissAnnouncement()" aria-label="Dismiss Announcement" title="Dismiss">&times;</button>
+        <div class="ticker-viewport">
+            <div class="ticker-track" id="tickerTrack">
+                <span id="announcementText" class="ticker-item">🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback, 1-click APK downloads & Watch Party sync active.</span>
+                <span class="ticker-item ticker-clone">🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback, 1-click APK downloads & Watch Party sync active.</span>
+            </div>
+        </div>
+        <button class="ticker-close" onclick="dismissAnnouncement()" aria-label="Dismiss Announcement" title="Dismiss">&times;</button>
     </div>
 
     <!-- App Quick Category & Genre Bar -->

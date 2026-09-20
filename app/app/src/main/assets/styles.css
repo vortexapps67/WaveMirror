@@ -3320,20 +3320,21 @@ google-cast-launcher {
     }
 }
 
-/* ---------------- Global Announcement Banner & Cloud Status ---------------- */
+/* ---------------- Global Announcement Ticker & Cloud Status ---------------- */
+.announcement-ticker,
 .announcement-banner {
     position: relative;
-    background: linear-gradient(90deg, rgba(99, 102, 241, 0.22) 0%, rgba(6, 182, 212, 0.28) 50%, rgba(16, 185, 129, 0.22) 100%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    background: linear-gradient(90deg, rgba(30, 27, 75, 0.9) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(17, 24, 39, 0.9) 100%);
+    border-bottom: 1px solid rgba(255, 215, 0, 0.25);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    padding: 0.65rem 1.25rem;
+    padding: 0.5rem 1.25rem;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
+    gap: 0.85rem;
     z-index: 110;
+    overflow: hidden;
     animation: slideDownBanner 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes slideDownBanner {
@@ -3346,48 +3347,78 @@ google-cast-launcher {
         transform: translateY(0);
     }
 }
+.announcement-ticker.hidden,
 .announcement-banner.hidden {
     display: none !important;
 }
-.announcement-inner {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    flex-wrap: wrap;
-    flex: 1;
-}
+.ticker-badge,
 .announcement-pill {
     background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
     color: #000;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 800;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     padding: 0.25rem 0.65rem;
     border-radius: var(--radius-full);
-    text-transform: uppercase;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 14px rgba(255, 215, 0, 0.45);
     white-space: nowrap;
     flex-shrink: 0;
 }
+.ticker-dot {
+    width: 6px;
+    height: 6px;
+    background: #000;
+    border-radius: 50%;
+    animation: pulseDot 1.5s infinite;
+}
+@keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.7); }
+}
+.ticker-viewport {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    mask-image: linear-gradient(90deg, transparent 0%, #000 2%, #000 98%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 2%, #000 98%, transparent 100%);
+}
+.ticker-track {
+    display: inline-flex;
+    gap: 4rem;
+    white-space: nowrap;
+    animation: tickerMarquee 28s linear infinite;
+}
+.ticker-track:hover {
+    animation-play-state: paused;
+}
+@keyframes tickerMarquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.ticker-item,
 .announcement-msg {
     font-size: 0.88rem;
     color: #ffffff;
     font-weight: 500;
-    line-height: 1.45;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
+.ticker-close,
 .announcement-close {
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: rgba(255, 255, 255, 0.8);
     font-size: 1.15rem;
     cursor: pointer;
     line-height: 1;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3395,6 +3426,7 @@ google-cast-launcher {
     transition: all 0.2s ease;
     flex-shrink: 0;
 }
+.ticker-close:hover,
 .announcement-close:hover {
     color: #fff;
     background: rgba(239, 68, 68, 0.4);

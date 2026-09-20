@@ -1305,10 +1305,12 @@ function updateDownloadCounterDisplay(count) {
 function applyAnnouncement(announcement) {
     const banner = document.getElementById("globalAnnouncementBanner");
     const textEl = document.getElementById("announcementText");
+    const cloneEl = document.querySelector(".ticker-clone");
     if (!banner || !textEl) return;
 
     if (announcement && announcement.enabled !== false && announcement.text && announcement.text.trim()) {
         textEl.innerText = announcement.text;
+        if (cloneEl) cloneEl.innerText = announcement.text;
         banner.classList.remove("hidden");
         banner.style.display = "flex";
     } else {

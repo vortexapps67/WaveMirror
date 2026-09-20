@@ -125,6 +125,15 @@
         </div>
     </header>
 
+    <!-- Global Cloud-Synced Announcement Banner -->
+    <div id="globalAnnouncementBanner" class="announcement-banner hidden">
+        <div class="announcement-inner">
+            <span class="announcement-pill">📢 LIVE UPDATE</span>
+            <span id="announcementText" class="announcement-msg"></span>
+        </div>
+        <button class="announcement-close" onclick="dismissAnnouncement()" aria-label="Dismiss Announcement">&times;</button>
+    </div>
+
     <!-- App Quick Category & Genre Bar -->
     <div class="app-category-bar" id="appCategoryBar">
         <button class="app-cat-pill active" onclick="handleCategoryPill('all', this)">🔥 All Trending</button>
@@ -782,10 +791,79 @@
             </div>
             
             <!-- Dashboard Section -->
-            <div id="adminDashboardSection" style="display: none;">
-                <!-- App Customizer Settings -->
-                <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1.5rem;">
-                    <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">⚙️ App Branding & Site Settings</h3>
+            <div id="adminDashboardSection" style="display: none; max-height: 75vh; overflow-y: auto; padding-right: 0.25rem;">
+                
+                <!-- 1. Cloud Backend Realtime Sync Status Card -->
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h3 style="font-size: 1.05rem; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            ☁️ Cloud Backend Realtime Sync
+                        </h3>
+                        <span class="sync-status-badge synced" id="adminBackendStatusBadge">🟢 Cloud Active</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div>
+                            <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Cloud Database REST Endpoint</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="adminBackendEndpointInput" placeholder="https://wavemirror-cloud-default-rtdb.firebaseio.com/settings.json" style="flex: 1; padding: 0.55rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.85rem; outline: none; font-family: var(--font-mono);">
+                                <button class="btn-secondary" style="padding: 0.5rem 0.85rem; font-size: 0.8rem;" onclick="testBackendConnection()">Ping Test</button>
+                            </div>
+                        </div>
+                        <div id="adminBackendStatusMsg" style="font-size: 0.8rem; color: var(--text-muted);">Real-time bi-directional settings sync active.</div>
+                    </div>
+                </div>
+
+                <!-- 2. Live GitHub Releases & Download Counter Sync Card -->
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h3 style="font-size: 1.05rem; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            🐙 GitHub API Release & Downloads Sync
+                        </h3>
+                        <span class="sync-status-badge synced" id="adminGhStatusBadge">● GitHub Live</span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <div style="background: rgba(0,0,0,0.3); padding: 0.6rem 0.85rem; border-radius: var(--radius-xs); border: 1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted); text-transform: uppercase;">GitHub Total Downloads</div>
+                            <div style="font-size: 1.2rem; font-weight: 800; color: var(--primary-cyan);" id="adminGhDownloadsCount">0</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 0.6rem 0.85rem; border-radius: var(--radius-xs); border: 1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted); text-transform: uppercase;">Latest Release Tag</div>
+                            <div style="font-size: 1.2rem; font-weight: 800; color: var(--primary-violet);" id="adminGhLatestTag">v1.0.1</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div>
+                            <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">GitHub Repository (owner/repo)</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="adminGhRepoInput" placeholder="vortexapps67/WaveMirror" style="flex: 1; padding: 0.55rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.85rem; outline: none; font-family: var(--font-mono);">
+                                <button class="btn-secondary" style="padding: 0.5rem 0.85rem; font-size: 0.8rem;" onclick="syncGitHubDownloadsAndReleases(true)">🔄 Sync Now</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Global Broadcast Announcement Card -->
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <h3 style="font-size: 1.05rem; color: #fff; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            📢 Global Announcement Banner
+                        </h3>
+                        <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #fff; cursor: pointer;">
+                            <input type="checkbox" id="adminAnnouncementToggle" style="cursor: pointer;">
+                            Show Banner
+                        </label>
+                    </div>
+                    <div>
+                        <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Announcement Message</label>
+                        <input type="text" id="adminAnnouncementInput" placeholder="e.g. 🎉 WaveMirror v1.0.1 is Live! High-speed 4K streaming available." style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.85rem; outline: none;">
+                    </div>
+                </div>
+
+                <!-- 4. App Branding & Core Customizer Settings -->
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1.25rem;">
+                    <h3 style="font-size: 1.05rem; color: #fff; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">⚙️ App Branding & Download Settings</h3>
                     <div style="display: flex; flex-direction: column; gap: 0.85rem;">
                         <div>
                             <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Application / Website Name</label>
@@ -793,11 +871,11 @@
                         </div>
                         <div>
                             <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Android APK Download URL</label>
-                            <input type="text" id="adminApkUrlInput" placeholder="https://... or app/build/.../app-debug.apk" style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.9rem; outline: none;">
+                            <input type="text" id="adminApkUrlInput" placeholder="https://... or app/build/.../app-release.apk" style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.9rem; outline: none;">
                         </div>
                         <div style="display: flex; gap: 0.75rem;">
                             <div style="flex: 1;">
-                                <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Base Downloads Count</label>
+                                <label style="font-size: var(--fs-2xs); color: var(--text-muted); display: block; margin-bottom: 0.25rem; text-transform: uppercase;">Base Seed Downloads</label>
                                 <input type="number" id="adminDownloadCountInput" placeholder="58490" style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.9rem; outline: none;">
                             </div>
                             <div style="flex: 1;">
@@ -805,13 +883,16 @@
                                 <input type="text" id="adminIgInput" placeholder="@vortex.apps" style="width: 100%; padding: 0.6rem 0.85rem; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.9rem; outline: none;">
                             </div>
                         </div>
-                        <button class="btn-primary" style="justify-content: center; margin-top: 0.4rem;" onclick="saveAdminCustomSettings()">Save & Apply Changes</button>
+                        <button class="btn-primary" style="justify-content: center; margin-top: 0.4rem; padding: 0.75rem;" onclick="saveAdminCustomSettings()">💾 Save & Sync Globally (Cloud + Local)</button>
                     </div>
                 </div>
 
-                <h3 style="font-size: 1.1rem; color: #fff; margin-bottom: 1rem;">Pending Reviews Approval</h3>
-                <div id="adminReviewsList" style="max-height: 280px; overflow-y: auto; padding-right: 0.5rem;">
-                    <!-- Pending reviews populated by app.js -->
+                <!-- 5. Pending Reviews Approval -->
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1.05rem; color: #fff; margin-bottom: 0.75rem;">🛡️ Pending Reviews Moderation</h3>
+                    <div id="adminReviewsList" style="max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
+                        <!-- Pending reviews populated by app.js -->
+                    </div>
                 </div>
             </div>
         </div>

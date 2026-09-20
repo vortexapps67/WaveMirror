@@ -1159,7 +1159,12 @@ function escapeHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-/* ---------------- Admin Panel Reviews Moderation ---------------- */
+/* ---------------- Admin Panel Reviews & Cloud Sync Engine ---------------- */
+const DEFAULT_CLOUD_BACKEND_ENDPOINT = "https://wavemirror-cloud-default-rtdb.firebaseio.com/settings.json";
+let totalGitHubDownloads = 0;
+let latestReleaseTag = "v1.0.1";
+let latestApkDownloadUrl = null;
+
 function openAdminPanel() {
     const modal = document.getElementById("adminPanelModal");
     if (!modal) return;
@@ -1190,11 +1195,28 @@ function checkAdminPassword() {
         const apkUrlInput = document.getElementById("adminApkUrlInput");
         const countInput = document.getElementById("adminDownloadCountInput");
         const igInput = document.getElementById("adminIgInput");
+        const ghRepoInput = document.getElementById("adminGhRepoInput");
+        const backendEndpointInput = document.getElementById("adminBackendEndpointInput");
+        const announcementInput = document.getElementById("adminAnnouncementInput");
+        const announcementToggle = document.getElementById("adminAnnouncementToggle");
 
         if (appNameInput) appNameInput.value = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
-        if (apkUrlInput) apkUrlInput.value = localStorage.getItem("wavemirror_custom_apk_url") || "app/app-release.apk";
-        if (countInput) countInput.value = localStorage.getItem("wavemirror_download_count") || "58490";
+        if (apkUrlInput) apkUrlInput.value = localStorage.getItem("wavemirror_custom_apk_url") || "app/build/outputs/apk/release/app-release.apk";
+        if (countInput) countInput.value = localStorage.getItem("wavemirror_base_download_count") || localStorage.getItem("wavemirror_download_count") || "58490";
         if (igInput) igInput.value = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
+        if (ghRepoInput) ghRepoInput.value = localStorage.getItem("wavemirror_github_repo") || "vortexapps67/WaveMirror";
+        if (backendEndpointInput) backendEndpointInput.value = getCloudEndpoint();
+
+        try {
+            const savedAnnounce = JSON.parse(localStorage.getItem("wavemirror_announcement") || "{}");
+            if (announcementInput) announcementInput.value = savedAnnounce.text || "";
+            if (announcementToggle) announcementToggle.checked = Boolean(savedAnnounce.enabled);
+        } catch (e) {}
+
+        const adminGhDownloads = document.getElementById("adminGhDownloadsCount");
+        if (adminGhDownloads) adminGhDownloads.innerText = totalGitHubDownloads.toLocaleString();
+        const adminGhTag = document.getElementById("adminGhLatestTag");
+        if (adminGhTag) adminGhTag.innerText = latestReleaseTag;
 
         loadAdminReviews();
         showToast("Access Granted. Welcome Admin.");
@@ -1203,15 +1225,28 @@ function checkAdminPassword() {
     }
 }
 
-/* ---------------- Dynamic App Branding & Admin Customizer ---------------- */
+/* ---------------- Dynamic App Branding, GitHub API & Cloud Sync ---------------- */
+function getCloudEndpoint() {
+    return localStorage.getItem("wavemirror_cloud_endpoint") || DEFAULT_CLOUD_BACKEND_ENDPOINT;
+}
+
 function loadCustomAppSettings() {
     const customName = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
     const customIg = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
-    const customDownloadCount = parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
+    const baseCount = parseInt(localStorage.getItem("wavemirror_base_download_count")) || parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
 
     applyAppBranding(customName);
     applyIgBranding(customIg);
-    updateDownloadCounterDisplay(customDownloadCount);
+    updateDownloadCounterDisplay(baseCount + totalGitHubDownloads);
+
+    try {
+        const savedAnnounce = JSON.parse(localStorage.getItem("wavemirror_announcement") || "{}");
+        applyAnnouncement(savedAnnounce);
+    } catch (e) {}
+
+    // Asynchronously synchronize with Cloud Backend & GitHub Releases API
+    syncBackendSettings();
+    syncGitHubDownloadsAndReleases();
 }
 
 function applyAppBranding(name) {
@@ -1240,13 +1275,361 @@ function updateDownloadCounterDisplay(count) {
     }
 }
 
+function applyAnnouncement(announcement) {
+    const banner = document.getElementById("globalAnnouncementBanner");
+    const textEl = document.getElementById("announcementText");
+    if (!banner || !textEl) return;
+
+    if (announcement && announcement.enabled && announcement.text && announcement.text.trim()) {
+        textEl.innerText = announcement.text;
+        banner.classList.remove("hidden");
+        banner.style.display = "flex";
+    } else {
+        banner.classList.add("hidden");
+        banner.style.display = "none";
+    }
+}
+
+function dismissAnnouncement() {
+    const banner = document.getElementById("globalAnnouncementBanner");
+    if (banner) {
+        banner.classList.add("hidden");
+        banner.style.display = "none";
+    }
+}
+
+/* ---------------- Real-time GitHub API Releases & Downloads Sync ---------------- */
+async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
+    const defaultRepo = "vortexapps67/WaveMirror";
+    const repo = localStorage.getItem("wavemirror_github_repo") || defaultRepo;
+    const cacheKey = `wavemirror_gh_cache_${repo}`;
+    const cacheTimeKey = `wavemirror_gh_cache_time_${repo}`;
+    
+    // Check local cache (valid for 5 minutes unless forced)
+    const cachedData = localStorage.getItem(cacheKey);
+    const cachedTime = localStorage.getItem(cacheTimeKey);
+    const now = Date.now();
+    
+    if (!forceRefresh && cachedData && cachedTime && (now - parseInt(cachedTime)) < 5 * 60 * 1000) {
+        try {
+            const data = JSON.parse(cachedData);
+            applyGitHubReleaseData(data);
+            return data;
+        } catch (e) {
+            console.warn("Cached GH parse failed:", e);
+        }
+    }
+    
+    try {
+        updateGitHubSyncStatus("syncing", "Connecting to GitHub API...");
+        
+        let res = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=100`, {
+            headers: { 'Accept': 'application/vnd.github.v3+json' }
+        });
+        
+        // Fallback to secondary repo if primary returns 404 or fails
+        if (!res.ok && repo !== "beatlabs790/WaveMirror") {
+            res = await fetch(`https://api.github.com/repos/beatlabs790/WaveMirror/releases?per_page=100`, {
+                headers: { 'Accept': 'application/vnd.github.v3+json' }
+            });
+        }
+        
+        if (res.ok) {
+            const releases = await res.json();
+            if (Array.isArray(releases) && releases.length > 0) {
+                let totalDownloads = 0;
+                let foundApkUrl = null;
+                let foundLatestTag = releases[0].tag_name || "v1.0.1";
+                let latestReleaseDate = releases[0].published_at;
+                let apkSizeMb = null;
+
+                releases.forEach(release => {
+                    if (release.assets && Array.isArray(release.assets)) {
+                        release.assets.forEach(asset => {
+                            if (asset.download_count) {
+                                totalDownloads += asset.download_count;
+                            }
+                            if (!foundApkUrl && asset.browser_download_url && asset.browser_download_url.endsWith(".apk")) {
+                                foundApkUrl = asset.browser_download_url;
+                                if (asset.size) {
+                                    apkSizeMb = (asset.size / (1024 * 1024)).toFixed(1);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                const ghData = {
+                    repo,
+                    totalDownloads,
+                    latestTag: foundLatestTag,
+                    apkUrl: foundApkUrl,
+                    apkSizeMb,
+                    latestReleaseDate,
+                    fetchedAt: now
+                };
+
+                localStorage.setItem(cacheKey, JSON.stringify(ghData));
+                localStorage.setItem(cacheTimeKey, String(now));
+
+                applyGitHubReleaseData(ghData);
+                updateGitHubSyncStatus("synced", `Synced with GitHub: ${totalDownloads.toLocaleString()} real asset downloads`);
+                if (forceRefresh) {
+                    showToast(`✅ GitHub Synced: ${totalDownloads.toLocaleString()} downloads (${foundLatestTag})`);
+                }
+                return ghData;
+            }
+        }
+        updateGitHubSyncStatus("fallback", "Using cached GitHub release data");
+    } catch (err) {
+        console.warn("GitHub API sync error:", err);
+        updateGitHubSyncStatus("offline", "GitHub API offline / rate limited");
+    }
+}
+
+function applyGitHubReleaseData(data) {
+    if (!data) return;
+    totalGitHubDownloads = data.totalDownloads || 0;
+    if (data.latestTag) latestReleaseTag = data.latestTag;
+    
+    const baseCount = parseInt(localStorage.getItem("wavemirror_base_download_count")) || 
+                      parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
+    const combinedCount = baseCount + totalGitHubDownloads;
+    
+    updateDownloadCounterDisplay(combinedCount);
+    
+    // Update live badge in download showcase
+    const showcaseBadge = document.querySelector(".app-download-badge");
+    if (showcaseBadge) {
+        showcaseBadge.innerHTML = `
+            <span class="status-dot-live" style="background:#10b981;"></span>
+            <span><strong id="appDownloadCounter">${combinedCount.toLocaleString()}</strong>+ Active Installs & Downloads</span>
+            <span class="gh-sync-tag" style="background:rgba(255,255,255,0.1); padding:2px 7px; border-radius:10px; font-size:0.7rem; margin-left:6px; font-weight:600; color:var(--primary-cyan);">● GitHub API Live (${latestReleaseTag})</span>
+        `;
+    }
+    
+    if (data.apkUrl) {
+        latestApkDownloadUrl = data.apkUrl;
+        localStorage.setItem("wavemirror_custom_apk_url", data.apkUrl);
+    }
+    
+    // Update QR box text
+    const qrInfo = document.querySelector(".app-download-preview-box div:last-child");
+    if (qrInfo && data.latestTag) {
+        const sizeText = data.apkSizeMb ? ` (~${data.apkSizeMb}MB)` : ' (~18MB)';
+        qrInfo.innerText = `Android 7.0+ • ${data.latestTag} Stable${sizeText}`;
+    }
+    
+    // Update Admin Panel displays
+    const adminGhDownloads = document.getElementById("adminGhDownloadsCount");
+    if (adminGhDownloads) adminGhDownloads.innerText = totalGitHubDownloads.toLocaleString();
+    const adminGhTag = document.getElementById("adminGhLatestTag");
+    if (adminGhTag) adminGhTag.innerText = latestReleaseTag;
+}
+
+function updateGitHubSyncStatus(state, msg) {
+    const badge = document.getElementById("adminGhStatusBadge");
+    if (!badge) return;
+    badge.className = `sync-status-badge ${state}`;
+    if (state === "synced") {
+        badge.innerText = "● GitHub Synced";
+    } else if (state === "syncing") {
+        badge.innerText = "🔄 Syncing...";
+    } else {
+        badge.innerText = "🟡 Cached/Offline";
+    }
+}
+
+/* ---------------- Cloud Backend Realtime Sync Engine ---------------- */
+async function syncBackendSettings() {
+    const endpoint = getCloudEndpoint();
+    updateBackendSyncStatus("syncing", "Connecting to Cloud Backend...");
+    
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        
+        const res = await fetch(endpoint, {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data === "object") {
+                if (data.appName) {
+                    localStorage.setItem("wavemirror_custom_app_name", data.appName);
+                    applyAppBranding(data.appName);
+                }
+                if (data.apkUrl) {
+                    localStorage.setItem("wavemirror_custom_apk_url", data.apkUrl);
+                }
+                if (data.baseDownloadCount !== undefined) {
+                    localStorage.setItem("wavemirror_base_download_count", data.baseDownloadCount);
+                    localStorage.setItem("wavemirror_download_count", data.baseDownloadCount);
+                    updateDownloadCounterDisplay(parseInt(data.baseDownloadCount) + totalGitHubDownloads);
+                }
+                if (data.igHandle) {
+                    localStorage.setItem("wavemirror_custom_ig", data.igHandle);
+                    applyIgBranding(data.igHandle);
+                }
+                if (data.githubRepo) {
+                    localStorage.setItem("wavemirror_github_repo", data.githubRepo);
+                }
+                if (data.announcement) {
+                    localStorage.setItem("wavemirror_announcement", JSON.stringify(data.announcement));
+                    applyAnnouncement(data.announcement);
+                }
+                
+                const timeStr = data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : new Date().toLocaleTimeString();
+                updateBackendSyncStatus("synced", `🟢 Connected to Cloud Backend (Last updated: ${timeStr})`);
+                return data;
+            }
+        }
+        updateBackendSyncStatus("offline", "Cloud Backend active (Local storage fallback)");
+    } catch (e) {
+        console.warn("Cloud backend sync notice:", e.message);
+        updateBackendSyncStatus("offline", "Local Mode (Offline / Cache Active)");
+    }
+}
+
+async function testBackendConnection() {
+    const endpoint = document.getElementById("adminBackendEndpointInput")?.value.trim() || getCloudEndpoint();
+    showToast("⚡ Pinging Cloud Backend...");
+    updateBackendSyncStatus("syncing", "Testing endpoint latency...");
+    
+    const startTime = Date.now();
+    try {
+        const res = await fetch(endpoint, {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+        const latency = Date.now() - startTime;
+        if (res.ok) {
+            updateBackendSyncStatus("synced", `🟢 Ping OK! Status: ${res.status} (${latency}ms)`);
+            showToast(`✅ Cloud Backend Connected! Latency: ${latency}ms`);
+        } else {
+            updateBackendSyncStatus("offline", `Backend responded with HTTP ${res.status}`);
+            showToast(`⚠️ Cloud response status: ${res.status}`);
+        }
+    } catch (err) {
+        updateBackendSyncStatus("offline", `Connection error: ${err.message}`);
+        showToast(`❌ Could not connect to endpoint: ${err.message}`);
+    }
+}
+
+function updateBackendSyncStatus(state, msg) {
+    const badge = document.getElementById("adminBackendStatusBadge");
+    const msgEl = document.getElementById("adminBackendStatusMsg");
+    if (badge) {
+        badge.className = `sync-status-badge ${state}`;
+        if (state === "synced") {
+            badge.innerText = "🟢 Cloud Active";
+        } else if (state === "syncing") {
+            badge.innerText = "🔄 Syncing...";
+        } else {
+            badge.innerText = "🟡 Local Mode";
+        }
+    }
+    if (msgEl && msg) {
+        msgEl.innerText = msg;
+    }
+}
+
+async function saveAdminCustomSettings() {
+    const nameInput = document.getElementById("adminAppNameInput")?.value.trim();
+    const apkInput = document.getElementById("adminApkUrlInput")?.value.trim();
+    const countInput = document.getElementById("adminDownloadCountInput")?.value;
+    const igInput = document.getElementById("adminIgInput")?.value.trim();
+    const ghRepoInput = document.getElementById("adminGhRepoInput")?.value.trim();
+    const endpointInput = document.getElementById("adminBackendEndpointInput")?.value.trim();
+    
+    const announcementText = document.getElementById("adminAnnouncementInput")?.value.trim();
+    const announcementActive = document.getElementById("adminAnnouncementToggle")?.checked || false;
+
+    if (nameInput) {
+        localStorage.setItem("wavemirror_custom_app_name", nameInput);
+        applyAppBranding(nameInput);
+    }
+    if (apkInput) {
+        localStorage.setItem("wavemirror_custom_apk_url", apkInput);
+    }
+    if (countInput) {
+        const countNum = parseInt(countInput);
+        if (!isNaN(countNum)) {
+            localStorage.setItem("wavemirror_base_download_count", countNum);
+            localStorage.setItem("wavemirror_download_count", countNum);
+            updateDownloadCounterDisplay(countNum + totalGitHubDownloads);
+        }
+    }
+    if (igInput) {
+        const cleanIg = igInput.startsWith("@") ? igInput : `@${igInput}`;
+        localStorage.setItem("wavemirror_custom_ig", cleanIg);
+        applyIgBranding(cleanIg);
+    }
+    if (ghRepoInput) {
+        localStorage.setItem("wavemirror_github_repo", ghRepoInput);
+    }
+    if (endpointInput) {
+        localStorage.setItem("wavemirror_cloud_endpoint", endpointInput);
+    }
+
+    const announcementObj = {
+        enabled: announcementActive,
+        text: announcementText || "",
+        lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem("wavemirror_announcement", JSON.stringify(announcementObj));
+    applyAnnouncement(announcementObj);
+
+    // Save payload to Cloud Backend REST API
+    const payload = {
+        appName: nameInput || "WaveMirror",
+        apkUrl: apkInput || localStorage.getItem("wavemirror_custom_apk_url") || "app/build/outputs/apk/release/app-release.apk",
+        baseDownloadCount: parseInt(countInput) || parseInt(localStorage.getItem("wavemirror_base_download_count")) || 58490,
+        igHandle: igInput || "@vortex.apps",
+        githubRepo: ghRepoInput || "vortexapps67/WaveMirror",
+        announcement: announcementObj,
+        lastUpdated: new Date().toISOString()
+    };
+
+    updateBackendSyncStatus("syncing", "Broadcasting settings to cloud backend...");
+    showToast("💾 Saving locally & syncing to Cloud Backend...");
+
+    const targetEndpoint = endpointInput || getCloudEndpoint();
+    try {
+        const res = await fetch(targetEndpoint, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            updateBackendSyncStatus("synced", `🟢 Globally Synced! (${new Date().toLocaleTimeString()})`);
+            showToast("✅ Settings synced worldwide to Cloud Backend!");
+        } else {
+            updateBackendSyncStatus("offline", `Saved locally (Cloud HTTP ${res.status})`);
+            showToast("Saved locally. Backend response: HTTP " + res.status);
+        }
+    } catch (err) {
+        console.warn("Backend save error:", err);
+        updateBackendSyncStatus("offline", "Saved locally (Offline mode)");
+        showToast("✅ Saved locally to device storage.");
+    }
+    
+    // Refresh GitHub Releases with updated repo
+    syncGitHubDownloadsAndReleases(true);
+}
+
 function downloadAppApk() {
     let currentCount = parseInt(localStorage.getItem("wavemirror_download_count")) || 58490;
     currentCount++;
     localStorage.setItem("wavemirror_download_count", currentCount);
-    updateDownloadCounterDisplay(currentCount);
+    updateDownloadCounterDisplay(currentCount + totalGitHubDownloads);
 
-    const apkUrl = localStorage.getItem("wavemirror_custom_apk_url") || "app/app-release.apk";
+    const apkUrl = localStorage.getItem("wavemirror_custom_apk_url") || latestApkDownloadUrl || "app/build/outputs/apk/release/app-release.apk";
     const appName = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
     showToast(`⬇️ Starting ${appName} Android APK Download...`);
 
@@ -1265,37 +1648,9 @@ function downloadAppApk() {
 
 function openMirrorDownload() {
     showToast("⚡ Opening Fast Mirror APK Server...");
-    const apkUrl = localStorage.getItem("wavemirror_custom_apk_url") || "https://github.com/beatlabs790/WaveMirror/releases/latest";
+    const repo = localStorage.getItem("wavemirror_github_repo") || "vortexapps67/WaveMirror";
+    const apkUrl = localStorage.getItem("wavemirror_custom_apk_url") || `https://github.com/${repo}/releases/latest`;
     window.open(apkUrl, "_blank");
-}
-
-function saveAdminCustomSettings() {
-    const nameInput = document.getElementById("adminAppNameInput")?.value.trim();
-    const apkInput = document.getElementById("adminApkUrlInput")?.value.trim();
-    const countInput = document.getElementById("adminDownloadCountInput")?.value;
-    const igInput = document.getElementById("adminIgInput")?.value.trim();
-
-    if (nameInput) {
-        localStorage.setItem("wavemirror_custom_app_name", nameInput);
-        applyAppBranding(nameInput);
-    }
-    if (apkInput) {
-        localStorage.setItem("wavemirror_custom_apk_url", apkInput);
-    }
-    if (countInput) {
-        const countNum = parseInt(countInput);
-        if (!isNaN(countNum)) {
-            localStorage.setItem("wavemirror_download_count", countNum);
-            updateDownloadCounterDisplay(countNum);
-        }
-    }
-    if (igInput) {
-        const cleanIg = igInput.startsWith("@") ? igInput : `@${igInput}`;
-        localStorage.setItem("wavemirror_custom_ig", cleanIg);
-        applyIgBranding(cleanIg);
-    }
-
-    showToast("✅ App Branding & Settings successfully updated!");
 }
 
 function loadAdminReviews() {

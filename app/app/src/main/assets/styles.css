@@ -305,11 +305,15 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: visibility 0.9s ease;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+.curtain-loader.curtain-revealed {
+    pointer-events: none !important;
 }
 .curtain-loader.hidden {
-    visibility: hidden;
-    pointer-events: none;
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 /* 12 Vertical Curtain Stripes (Line-by-Line Reveal) */

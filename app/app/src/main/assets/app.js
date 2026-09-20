@@ -29,21 +29,26 @@ window.open = function(url, target, features) {
 
 // Curtain Loading Screen Lifecycle Controller
 function showLoader(show) {
-    const curtain = document.getElementById("curtainLoader");
+    const curtain = document.getElementById("curtainLoader") || document.getElementById("global-loader");
     if (!curtain) return;
     if (show) {
         curtain.classList.remove("curtain-revealed");
         curtain.classList.remove("hidden");
+        curtain.style.display = "";
     } else {
-        // Line-by-line curtain reveal transition
+        // Trigger line-by-line curtain retraction
+        curtain.classList.add("curtain-revealed");
         setTimeout(() => {
-            curtain.classList.add("curtain-revealed");
-            setTimeout(() => {
-                curtain.classList.add("hidden");
-            }, 900);
-        }, 550);
+            curtain.classList.add("hidden");
+            curtain.style.display = "none";
+        }, 850);
     }
 }
+
+// Immediate safety watchdog: guarantees curtain opens smoothly even on slow networks
+setTimeout(() => {
+    showLoader(false);
+}, 1500);
 
 // Skeleton Cards Generator for Zero-Latency Shimmering Placeholders
 function getSkeletonCardsHTML(count = 10) {
@@ -143,16 +148,6 @@ async function initApp() {
 
     // Load custom app name, IG handle, and download count
     loadCustomAppSettings();
-}
-
-function showLoader(show) {
-    const loader = document.getElementById("global-loader");
-    if (!loader) return;
-    if (show) {
-        loader.classList.remove("hidden");
-    } else {
-        setTimeout(() => loader.classList.add("hidden"), 300);
-    }
 }
 
 /* ---------------- Hero Spotlight Slider ---------------- */

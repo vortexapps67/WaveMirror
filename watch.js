@@ -53,6 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             closeWatchlistDrawer();
             closeMobileSearch();
             closeCastModal();
+            closeDownloadModal();
             const results = document.getElementById("watchSearchResults");
             if (results) results.classList.remove("active");
         }
@@ -1047,4 +1048,78 @@ function copyTvStreamUrl() {
             showToast("📋 TV Stream URL copied!");
         }
     }
+}
+
+/* ---------------- 📥 Download Station Engine ---------------- */
+function openDownloadModal() {
+    const modal = document.getElementById("downloadModal");
+    const modalTitle = document.getElementById("downloadModalTitle");
+    const modalSub = document.getElementById("downloadModalSubtitle");
+
+    const link1 = document.getElementById("downloadDirectLink1");
+    const link2 = document.getElementById("downloadDirectLink2");
+    const torrentLink = document.getElementById("downloadTorrentLink");
+    const subLink = document.getElementById("downloadSubtitlesLink");
+
+    const movieTitle = activeMovie?.title || "Media Stream";
+    const year = activeMovie?.year || "2024";
+    const s = document.getElementById("seasonSelect")?.value || 1;
+    const e = document.getElementById("episodeSelect")?.value || 1;
+
+    if (modalTitle) {
+        modalTitle.innerText = currentType === "tv" 
+            ? `Download: ${movieTitle} (S${s} E${e})` 
+            : `Download: ${movieTitle} (${year})`;
+    }
+
+    if (modalSub) {
+        modalSub.innerText = currentType === "tv"
+            ? `Season ${s}, Episode ${e} • High-Speed Direct & Torrent Mirrors`
+            : `4K Ultra HD & 1080p Full HD Mirrors`;
+    }
+
+    // Mirror 1: Vidlink Stream Download Gateway
+    if (link1) {
+        if (currentType === "tv") {
+            link1.href = `https://vidlink.pro/tv/${currentId}/${s}/${e}`;
+        } else {
+            link1.href = `https://vidlink.pro/movie/${currentId}`;
+        }
+    }
+
+    // Mirror 2: AutoEmbed Direct Stream
+    if (link2) {
+        if (currentType === "tv") {
+            link2.href = `https://player.autoembed.cc/embed/tv/${currentId}/${s}/${e}`;
+        } else {
+            link2.href = `https://player.autoembed.cc/embed/movie/${currentId}`;
+        }
+    }
+
+    // Magnet / Torrent Finder
+    if (torrentLink) {
+        const query = currentType === "tv" 
+            ? `${movieTitle} S${String(s).padStart(2, '0')}E${String(e).padStart(2, '0')} 1080p` 
+            : `${movieTitle} ${year} 1080p`;
+        torrentLink.href = `https://1337x.to/search/${encodeURIComponent(query)}/1/`;
+    }
+
+    // OpenSubtitles Finder
+    if (subLink) {
+        const subQuery = currentType === "tv" 
+            ? `${movieTitle} Season ${s} Episode ${e}` 
+            : `${movieTitle} ${year}`;
+        subLink.href = `https://www.opensubtitles.org/en/search2/sublanguageid-all/moviename-${encodeURIComponent(subQuery)}`;
+    }
+
+    if (modal) {
+        modal.classList.add("active");
+        document.body.style.overflow = "hidden";
+    }
+}
+
+function closeDownloadModal() {
+    const modal = document.getElementById("downloadModal");
+    if (modal) modal.classList.remove("active");
+    document.body.style.overflow = "auto";
 }

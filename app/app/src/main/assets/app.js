@@ -27,6 +27,46 @@ window.open = function(url, target, features) {
     return null;
 };
 
+// Curtain Loading Screen Lifecycle Controller
+function showLoader(show) {
+    const curtain = document.getElementById("curtainLoader");
+    if (!curtain) return;
+    if (show) {
+        curtain.classList.remove("curtain-revealed");
+        curtain.classList.remove("hidden");
+    } else {
+        // Line-by-line curtain reveal transition
+        setTimeout(() => {
+            curtain.classList.add("curtain-revealed");
+            setTimeout(() => {
+                curtain.classList.add("hidden");
+            }, 900);
+        }, 550);
+    }
+}
+
+// Skeleton Cards Generator for Zero-Latency Shimmering Placeholders
+function getSkeletonCardsHTML(count = 10) {
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += `
+            <div class="movie-card skeleton-card">
+                <div class="poster-wrapper skeleton-poster-wrap">
+                    <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="movie-info skeleton-info">
+                    <div class="skeleton-line title skeleton-shimmer"></div>
+                    <div class="skeleton-subinfo">
+                        <div class="skeleton-line sub skeleton-shimmer"></div>
+                        <div class="skeleton-line rating skeleton-shimmer"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    return html;
+}
+
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
@@ -34,6 +74,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function initApp() {
     showLoader(true);
+
+    // Populate initial skeleton cards immediately under the curtain
+    const movieGrid = document.getElementById("movieGrid");
+    const top10Grid = document.getElementById("top10Grid");
+    const seriesGrid = document.getElementById("seriesGrid");
+    if (movieGrid) movieGrid.innerHTML = getSkeletonCardsHTML(10);
+    if (top10Grid) top10Grid.innerHTML = getSkeletonCardsHTML(6);
+    if (seriesGrid) seriesGrid.innerHTML = getSkeletonCardsHTML(10);
     
     try {
         const [liveMovies, liveSeries] = await Promise.all([
@@ -210,7 +258,9 @@ async function filterGenre(genre) {
         chip.classList.toggle("active", chip.innerText === genre || (genre === "All" && chip.innerText === "All Titles"));
     });
 
-    showLoader(true);
+    const grid = document.getElementById("movieGrid");
+    if (grid) grid.innerHTML = getSkeletonCardsHTML(10);
+
     let results = [];
     try {
         if (genre === "All") {
@@ -243,7 +293,6 @@ async function filterGenre(genre) {
         console.warn("Error filtering genre with advanced parameters:", e);
         results = currentCatalog.filter(m => genre === "All" || (m.genres && m.genres.includes(genre)));
     }
-    showLoader(false);
     renderMovieGrid(results);
 }
 
@@ -1978,7 +2027,7 @@ async function initMoviesView() {
     const grid = document.getElementById("moviesViewGrid");
     if (!grid) return;
     if (grid.children.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">Loading Movies Catalog...</div>';
+        grid.innerHTML = getSkeletonCardsHTML(12);
     }
 
     const url = `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`;
@@ -1993,7 +2042,9 @@ async function filterMovieViewGenre(genre) {
     const chips = document.querySelectorAll("#moviesGenreChips .genre-chip");
     chips.forEach(c => c.classList.toggle("active", c.innerText === genre || (genre === "All" && c.innerText === "All Movies")));
 
-    showLoader(true);
+    const grid = document.getElementById("moviesViewGrid");
+    if (grid) grid.innerHTML = getSkeletonCardsHTML(12);
+
     let items = [];
     try {
         if (genre === "All") {
@@ -2009,7 +2060,6 @@ async function filterMovieViewGenre(genre) {
     } catch (e) {
         console.warn("Movies filter error:", e);
     }
-    showLoader(false);
     renderMoviesViewGrid(items.length ? items : currentCatalog);
 }
 
@@ -2043,7 +2093,7 @@ async function initSeriesView() {
     const grid = document.getElementById("seriesViewGrid");
     if (!grid) return;
     if (grid.children.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">Loading TV Shows Catalog...</div>';
+        grid.innerHTML = getSkeletonCardsHTML(12);
     }
 
     const url = `${TMDB_BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}`;
@@ -2058,7 +2108,9 @@ async function filterSeriesViewGenre(genre) {
     const chips = document.querySelectorAll("#seriesGenreChips .genre-chip");
     chips.forEach(c => c.classList.toggle("active", c.innerText === genre || (genre === "All" && c.innerText === "All TV Series")));
 
-    showLoader(true);
+    const grid = document.getElementById("seriesViewGrid");
+    if (grid) grid.innerHTML = getSkeletonCardsHTML(12);
+
     let items = [];
     try {
         if (genre === "All") {
@@ -2083,7 +2135,6 @@ async function filterSeriesViewGenre(genre) {
     } catch (e) {
         console.warn("Series filter error:", e);
     }
-    showLoader(false);
     renderSeriesViewGrid(items);
 }
 
@@ -2130,7 +2181,7 @@ async function applyDiscoverFilters() {
     const sort = document.getElementById("discoverSortSelect")?.value || "popularity.desc";
 
     if (!grid) return;
-    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">Searching catalog...</div>';
+    grid.innerHTML = getSkeletonCardsHTML(12);
 
     let results = [];
     try {
@@ -2300,5 +2351,12 @@ document.addEventListener("DOMContentLoaded", () => {
             logoBadge.classList.add("app-badge-pro");
         }
     }
+});
+
+// Window load safety fallback for curtain reveal
+window.addEventListener("load", () => {
+    setTimeout(() => {
+        showLoader(false);
+    }, 1200);
 });
 

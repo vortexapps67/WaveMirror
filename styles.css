@@ -150,6 +150,7 @@ body {
     display: flex;
     flex-direction: column;
     background: var(--bg);
+    padding-bottom: 96px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-size: var(--fs-base);
@@ -292,33 +293,211 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 }
 * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
 
-/* Global Loading Spinner */
-#global-loader {
+/* ================================================================
+   CINEMATIC LINE-BY-LINE CURTAIN LOADING SCREEN
+   ================================================================ */
+.curtain-loader {
     position: fixed;
     inset: 0;
-    z-index: 99999;
-    background: var(--bg-dark);
+    z-index: 100000;
+    overflow: hidden;
+    pointer-events: all;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: visibility 0.9s ease;
+}
+.curtain-loader.hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* 12 Vertical Curtain Stripes (Line-by-Line Reveal) */
+.curtain-stripes {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+.curtain-stripe {
+    flex: 1;
+    height: 100%;
+    background: linear-gradient(180deg, #07080b 0%, #0d0f16 50%, #07080b 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    transform: translateY(0);
+    transition: transform 0.75s cubic-bezier(0.77, 0, 0.175, 1);
+    transition-delay: calc(var(--stripe-idx) * 0.045s);
+    will-change: transform;
+}
+
+/* Staggered Line-by-Line Retraction */
+.curtain-loader.curtain-revealed .curtain-stripe:nth-child(odd) {
+    transform: translateY(-102%);
+}
+.curtain-loader.curtain-revealed .curtain-stripe:nth-child(even) {
+    transform: translateY(102%);
+}
+
+/* Center Curtain Branding & Progress */
+.curtain-content {
+    position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1.2rem;
-    transition: opacity 0.4s ease;
+    gap: 1.1rem;
+    transition: opacity 0.35s ease, transform 0.35s ease;
 }
-#global-loader.hidden {
+.curtain-loader.curtain-revealed .curtain-content {
     opacity: 0;
+    transform: scale(0.92);
     pointer-events: none;
 }
-.loader-spinner {
-    width: 36px;
-    height: 36px;
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    border-top-color: var(--text-main);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
+
+.curtain-logo-wrap {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-@keyframes spin {
-    to { transform: rotate(360deg); }
+.curtain-logo-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    object-fit: cover;
+    z-index: 2;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    animation: curtainPulse 2s ease-in-out infinite alternate;
+}
+.curtain-logo-halo {
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.45) 0%, rgba(244, 63, 94, 0.25) 50%, transparent 70%);
+    filter: blur(14px);
+    z-index: 1;
+    animation: curtainHaloRotate 4s linear infinite;
+}
+
+.curtain-brand {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+.curtain-brand-accent {
+    color: var(--accent);
+    text-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
+}
+
+.curtain-progress-track {
+    width: 180px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    overflow: hidden;
+    position: relative;
+}
+.curtain-progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #6366f1, #06b6d4, #f43f5e, #6366f1);
+    background-size: 300% 100%;
+    animation: curtainLaserProgress 1.4s infinite linear;
+}
+
+.curtain-tagline {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+@keyframes curtainPulse {
+    0% { transform: scale(0.96); filter: brightness(0.95); }
+    100% { transform: scale(1.04); filter: brightness(1.15); }
+}
+@keyframes curtainHaloRotate {
+    0% { transform: rotate(0deg) scale(0.9); }
+    50% { transform: rotate(180deg) scale(1.15); }
+    100% { transform: rotate(360deg) scale(0.9); }
+}
+@keyframes curtainLaserProgress {
+    0% { background-position: 0% 0; }
+    100% { background-position: 300% 0; }
+}
+
+/* ================================================================
+   SKELETON SHIMMER LOADERS
+   ================================================================ */
+.skeleton-card {
+    background: var(--surface-1);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    min-height: 280px;
+    pointer-events: none;
+}
+.skeleton-poster-wrap {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    background: #13141a;
+    position: relative;
+    overflow: hidden;
+}
+.skeleton-shimmer {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.02) 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.6s infinite ease-in-out;
+}
+.skeleton-info {
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.skeleton-line {
+    border-radius: 4px;
+    height: 12px;
+}
+.skeleton-line.title {
+    width: 82%;
+    height: 14px;
+}
+.skeleton-subinfo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+}
+.skeleton-line.sub {
+    width: 38%;
+    height: 10px;
+}
+.skeleton-line.rating {
+    width: 25%;
+    height: 10px;
+}
+@keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 /* ---------------- Navigation Bar ---------------- */

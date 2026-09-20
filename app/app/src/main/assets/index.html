@@ -32,10 +32,33 @@
 <body>
     <a class="skip-link" href="#explore">Skip to catalogue</a>
 
-    <!-- Global Loader -->
-    <div id="global-loader">
-        <div class="loader-spinner"></div>
-        <p style="font-size: var(--fs-micro); font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--track-caps);">Loading WaveMirror</p>
+    <!-- Cinematic Line-by-Line Curtain Loading Screen -->
+    <div id="curtainLoader" class="curtain-loader">
+        <div class="curtain-stripes">
+            <div class="curtain-stripe" style="--stripe-idx: 0;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 1;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 2;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 3;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 4;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 5;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 6;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 7;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 8;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 9;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 10;"></div>
+            <div class="curtain-stripe" style="--stripe-idx: 11;"></div>
+        </div>
+        <div class="curtain-content" id="curtainContent">
+            <div class="curtain-logo-wrap">
+                <img src="wavemirror_new.png" alt="WaveMirror" class="curtain-logo-img">
+                <div class="curtain-logo-halo"></div>
+            </div>
+            <div class="curtain-brand">Wave<span class="curtain-brand-accent">Mirror</span></div>
+            <div class="curtain-progress-track">
+                <div class="curtain-progress-fill"></div>
+            </div>
+            <div class="curtain-tagline">STREAMING REVOLUTION • 100% FREE</div>
+        </div>
     </div>
 
     <!-- Navigation Bar -->

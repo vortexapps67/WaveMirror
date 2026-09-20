@@ -51,6 +51,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
             closeWatchlistDrawer();
+            closeMobileSearch();
+            closeCastModal();
             const results = document.getElementById("watchSearchResults");
             if (results) results.classList.remove("active");
         }
@@ -117,9 +119,15 @@ async function initializePlayer(autoResume = false) {
     const dirElem = document.getElementById("modalDirector");
     if (dirElem) dirElem.innerText = movie.director || "Featured Director";
     const cElem = document.getElementById("modalCast");
-    if (cElem) cElem.innerText = movie.cast ? movie.cast.join(", ") : "Lead Cast";
+    if (cElem) cElem.innerText = movie.cast && movie.cast.length ? movie.cast.join(", ") : "Lead Cast";
     const gElem = document.getElementById("modalGenres");
-    if (gElem) gElem.innerText = movie.genres ? movie.genres.join(" • ") : "Action • Cinema";
+    if (gElem) {
+        if (movie.genres && Array.isArray(movie.genres) && movie.genres.length > 0) {
+            gElem.innerHTML = movie.genres.map(g => `<span class="watch-genre-pill">${g}</span>`).join('');
+        } else {
+            gElem.innerHTML = '<span class="watch-genre-pill">Cinema</span>';
+        }
+    }
 
     // Watchlist state check
     updateWatchlistButton();
@@ -298,9 +306,26 @@ async function fetchAndRenderSimilar(id, type = "movie") {
     }
 }
 
-function handleWatchLiveSearch(query) {
+function openMobileSearch() {
+    const modal = document.getElementById("mobileSearchModal");
+    const input = document.getElementById("mobileSearchInput");
+    if (modal) modal.classList.add("active");
+    if (input) {
+        input.focus();
+        if (input.value && input.value.trim().length >= 2) {
+            handleWatchLiveSearch(input.value, true);
+        }
+    }
+}
+
+function closeMobileSearch() {
+    const modal = document.getElementById("mobileSearchModal");
+    if (modal) modal.classList.remove("active");
+}
+
+function handleWatchLiveSearch(query, isMobile = false) {
     clearTimeout(searchDebounce);
-    const resultsContainer = document.getElementById("watchSearchResults");
+    const resultsContainer = isMobile ? document.getElementById("mobileSearchResults") : document.getElementById("watchSearchResults");
     if (!resultsContainer) return;
 
     if (!query || query.trim().length < 2) {
@@ -317,12 +342,12 @@ function handleWatchLiveSearch(query) {
             const valid = (data.results || []).filter(item => (item.media_type === "movie" || item.media_type === "tv") && (item.poster_path || item.backdrop_path));
 
             if (valid.length === 0) {
-                resultsContainer.innerHTML = `<div style="padding: 1rem; color: var(--text-muted); font-size: 0.85rem; text-align: center;">No matches found for "${query}"</div>`;
+                resultsContainer.innerHTML = `<div style="padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; text-align: center;">No matches found for "${query}"</div>`;
                 resultsContainer.classList.add("active");
                 return;
             }
 
-            resultsContainer.innerHTML = valid.slice(0, 6).map(item => {
+            resultsContainer.innerHTML = valid.slice(0, isMobile ? 12 : 6).map(item => {
                 const title = item.title || item.name;
                 const type = item.media_type || "movie";
                 const year = (item.release_date || item.first_air_date || "2024").substring(0, 4);
@@ -333,9 +358,9 @@ function handleWatchLiveSearch(query) {
                     <a class="watch-search-item" href="watch.html?id=${item.id}&type=${type}">
                         <img src="${poster}" alt="${title}">
                         <div style="flex: 1; overflow: hidden;">
-                            <div style="font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${title}</div>
+                            <div style="font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;">${title}</div>
                             <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
-                                <span style="text-transform: uppercase; color: var(--primary-cyan);">${type}</span> • ${year} • ★ ${rating}
+                                <span style="text-transform: uppercase; color: var(--text-main); font-weight: 600;">${type}</span> • ${year} • ★ ${rating}
                             </div>
                         </div>
                     </a>
@@ -345,7 +370,7 @@ function handleWatchLiveSearch(query) {
         } catch (e) {
             console.warn("[Watch] Live search error:", e);
         }
-    }, 300);
+    }, 280);
 }
 
 function confirmResumePlayback() {

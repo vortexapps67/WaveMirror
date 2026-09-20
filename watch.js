@@ -1091,16 +1091,22 @@ function triggerDirectMp4Download(quality = "1080p") {
         ? `${safeTitle}_S${String(s).padStart(2, '0')}E${String(e).padStart(2, '0')}_${quality}_WaveMirror.mp4`
         : `${safeTitle}_${year}_${quality}_WaveMirror.mp4`;
 
-    showToast(`📥 Starting direct download: ${fileName}`);
+    showToast(`📥 Opening direct video download: ${fileName}`);
 
-    // Direct MP4 stream download endpoints
+    // Direct stream download gateways
     let downloadUrl = "";
-    if (currentType === "tv") {
-        downloadUrl = `https://dl.vidsrc.vip/tv/${currentId}/${s}/${e}`;
+    if (quality === "1080p") {
+        downloadUrl = currentType === "tv" 
+            ? `https://vidlink.pro/tv/${currentId}/${s}/${e}` 
+            : `https://vidlink.pro/movie/${currentId}`;
+    } else if (quality === "720p") {
+        downloadUrl = currentType === "tv" 
+            ? `https://vidsrc.xyz/embed/tv/${currentId}/${s}-${e}` 
+            : (currentImdb ? `https://vidsrc.xyz/embed/movie/${currentImdb}` : `https://vidsrc.xyz/embed/movie/${currentId}`);
     } else {
-        downloadUrl = currentImdb 
-            ? `https://dl.vidsrc.vip/movie/${currentImdb}` 
-            : `https://dl.vidsrc.vip/movie/${currentId}`;
+        downloadUrl = currentType === "tv" 
+            ? `https://vidsrc.cc/v2/embed/tv/${currentId}/${s}/${e}` 
+            : `https://vidsrc.cc/v2/embed/movie/${currentId}`;
     }
 
     // Trigger direct browser download

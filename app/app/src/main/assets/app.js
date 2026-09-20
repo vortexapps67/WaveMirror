@@ -1160,7 +1160,11 @@ function escapeHtml(str) {
 }
 
 /* ---------------- Admin Panel Reviews & Cloud Sync Engine ---------------- */
-const DEFAULT_CLOUD_BACKEND_ENDPOINT = "https://wavemirror-cloud-default-rtdb.firebaseio.com/settings.json";
+const DEFAULT_CLOUD_BACKEND_ENDPOINT = (typeof window !== "undefined" && window.ENV && window.ENV.WAVEMIRROR_CLOUD_ENDPOINT) 
+    ? window.ENV.WAVEMIRROR_CLOUD_ENDPOINT 
+    : (typeof window !== "undefined" && window.ENV && window.ENV.FIREBASE_DATABASE_URL 
+        ? `${window.ENV.FIREBASE_DATABASE_URL}/settings.json` 
+        : "https://shop-1e207-default-rtdb.firebaseio.com/settings.json");
 let totalGitHubDownloads = 0;
 let latestReleaseTag = "v1.0.1";
 let latestApkDownloadUrl = null;

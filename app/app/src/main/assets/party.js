@@ -73,15 +73,15 @@ let partyState = {
     dbRoomRef: null
 };
 
-const DEFAULT_FIREBASE_CONFIG = {
-    apiKey: "AIzaSyAPjV1bkduOVAl8u_30C7XbO7MgkDo9yE4",
-    authDomain: "chicknbun.firebaseapp.com",
-    databaseURL: "https://chicknbun-default-rtdb.firebaseio.com",
-    projectId: "chicknbun",
-    storageBucket: "chicknbun.firebasestorage.app",
-    messagingSenderId: "645109894487",
-    appId: "1:645109894487:web:99466cf25e3e5b6019c212",
-    measurementId: "G-N7F026W5G5"
+const DEFAULT_FIREBASE_CONFIG = (typeof window !== "undefined" && window.FIREBASE_CONFIG) ? window.FIREBASE_CONFIG : {
+    apiKey: "AIzaSyDsFLdaHNTjSNbO2fi4W5HvNQKyIfQy2no",
+    authDomain: "shop-1e207.firebaseapp.com",
+    databaseURL: "https://shop-1e207-default-rtdb.firebaseio.com",
+    projectId: "shop-1e207",
+    storageBucket: "shop-1e207.firebasestorage.app",
+    messagingSenderId: "123370597498",
+    appId: "1:123370597498:web:527b50fb6858d64d2edfc3",
+    measurementId: "G-4J40C28S58"
 };
 
 // Initialize Profile on page load

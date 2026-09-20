@@ -2793,7 +2793,23 @@ google-cast-launcher {
     border-color: rgba(255, 255, 255, 0.7);
 }
 
+/* Neutral Drag Cancellation State (When dragged outside without selecting) */
+.pill-slider-thumb.is-canceling {
+    opacity: 0.45;
+    transform: translate3d(var(--drag-x, 0px), 0, 0) scale(0.92, 0.92) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+    filter: grayscale(0.5);
+}
+
 /* Nav Item Buttons */
+.mobile-nav-item,
+.mobile-bottom-nav * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    -webkit-touch-callout: none !important;
+}
 .mobile-nav-item {
     display: flex;
     flex-direction: column;

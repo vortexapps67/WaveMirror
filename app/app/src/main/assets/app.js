@@ -1720,7 +1720,11 @@ function initPillDockSlider() {
     const navItems = Array.from(dock.querySelectorAll(".mobile-nav-item"));
 
     let isPointerDown = false;
+    let startX = 0;
+    let startY = 0;
+    let hasMoved = false;
     let currentHoveredIndex = -1;
+    let isCancelled = false;
     let animFrame = null;
     let activePointerId = null;
 
@@ -1742,14 +1746,30 @@ function initPillDockSlider() {
         const slotWidth = (dockRect.width - 12) / tabs.length;
         const relativeX = clientX - dockRect.left - (slotWidth / 2);
         const minX = 0;
-        const maxX = dockRect.width - 12 - slotWidth;
+        const maxX = Math.max(0, dockRect.width - 12 - slotWidth);
         return Math.max(minX, Math.min(maxX, relativeX));
+    }
+
+    function isOutsideCancelZone(clientX, clientY) {
+        const dockRect = dock.getBoundingClientRect();
+        const verticalTolerance = 36; // px above or below dock
+        const horizontalTolerance = 24; // px left or right of dock
+        return (
+            clientY < (dockRect.top - verticalTolerance) ||
+            clientY > (dockRect.bottom + verticalTolerance) ||
+            clientX < (dockRect.left - horizontalTolerance) ||
+            clientX > (dockRect.right + horizontalTolerance)
+        );
     }
 
     function onPointerDown(e) {
         // Only primary button / touch
         if (e.button && e.button !== 0) return;
         isPointerDown = true;
+        hasMoved = false;
+        isCancelled = false;
+        startX = e.clientX;
+        startY = e.clientY;
         activePointerId = e.pointerId;
 
         if (dock.setPointerCapture && e.pointerId !== undefined) {
@@ -1757,6 +1777,7 @@ function initPillDockSlider() {
         }
 
         thumb.classList.add("is-dragging");
+        thumb.classList.remove("is-canceling");
         const thumbX = calculateThumbX(e.clientX);
         thumb.style.setProperty("--drag-x", `${thumbX}px`);
 
@@ -1773,19 +1794,35 @@ function initPillDockSlider() {
     function onPointerMove(e) {
         if (!isPointerDown) return;
 
+        const distX = Math.abs(e.clientX - startX);
+        const distY = Math.abs(e.clientY - startY);
+        if (distX > 6 || distY > 6) {
+            hasMoved = true;
+        }
+
         if (animFrame) cancelAnimationFrame(animFrame);
         animFrame = requestAnimationFrame(() => {
-            const thumbX = calculateThumbX(e.clientX);
-            thumb.style.setProperty("--drag-x", `${thumbX}px`);
+            // Check if user dragged outside to cancel selection
+            isCancelled = isOutsideCancelZone(e.clientX, e.clientY);
 
-            const newHoveredIndex = getIndexFromPointerX(e.clientX);
-            if (newHoveredIndex !== currentHoveredIndex) {
-                currentHoveredIndex = newHoveredIndex;
-                navItems.forEach((btn, idx) => {
-                    btn.classList.toggle("is-hovered", idx === currentHoveredIndex);
-                });
-                if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
-                    try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
+            if (isCancelled) {
+                thumb.classList.add("is-canceling");
+                navItems.forEach(btn => btn.classList.remove("is-hovered"));
+                currentHoveredIndex = -1;
+            } else {
+                thumb.classList.remove("is-canceling");
+                const thumbX = calculateThumbX(e.clientX);
+                thumb.style.setProperty("--drag-x", `${thumbX}px`);
+
+                const newHoveredIndex = getIndexFromPointerX(e.clientX);
+                if (newHoveredIndex !== currentHoveredIndex) {
+                    currentHoveredIndex = newHoveredIndex;
+                    navItems.forEach((btn, idx) => {
+                        btn.classList.toggle("is-hovered", idx === currentHoveredIndex);
+                    });
+                    if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
+                        try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
+                    }
                 }
             }
         });
@@ -1801,7 +1838,15 @@ function initPillDockSlider() {
         activePointerId = null;
 
         thumb.classList.remove("is-dragging");
+        thumb.classList.remove("is-canceling");
         navItems.forEach(btn => btn.classList.remove("is-hovered"));
+
+        // If cancelled (dragged away / outside) or released outside dock zone:
+        // Do NOT select or switch anything — smoothly snap thumb back to current active tab
+        if (isCancelled || isOutsideCancelZone(e.clientX, e.clientY)) {
+            updatePillThumbPosition(currentAppTab);
+            return;
+        }
 
         const finalIndex = getIndexFromPointerX(e.clientX);
         const selectedTab = tabs[finalIndex] || currentAppTab;
@@ -1809,11 +1854,24 @@ function initPillDockSlider() {
         switchAppTab(selectedTab);
     }
 
+    function onPointerCancel() {
+        if (!isPointerDown) return;
+        isPointerDown = false;
+        if (dock.releasePointerCapture && activePointerId !== null) {
+            try { dock.releasePointerCapture(activePointerId); } catch (err) {}
+        }
+        activePointerId = null;
+        thumb.classList.remove("is-dragging");
+        thumb.classList.remove("is-canceling");
+        navItems.forEach(btn => btn.classList.remove("is-hovered"));
+        updatePillThumbPosition(currentAppTab);
+    }
+
     // Touch & Pointer Listeners
     dock.addEventListener("pointerdown", onPointerDown);
     dock.addEventListener("pointermove", onPointerMove, { passive: true });
     dock.addEventListener("pointerup", onPointerUp);
-    dock.addEventListener("pointercancel", onPointerUp);
+    dock.addEventListener("pointercancel", onPointerCancel);
 }
 
 // Category Pill Handler

@@ -131,8 +131,9 @@ function renderHeroSlider() {
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                         Play Free Stream
                     </button>
-                    <button class="btn-secondary" onclick="playTrailer('${movie.id}', '${movie.type}')" style="border-color: var(--primary-gold); color: var(--primary-gold);">
-                        🎬 Watch Trailer
+                    <button class="btn-secondary" onclick="playTrailer('${movie.id}', '${movie.type}')">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M8 5v14M16 5v14M2.5 12h19"/></svg>
+                        Watch Trailer
                     </button>
                     <button class="btn-secondary" onclick="toggleWatchlistFromHero('${movie.id}')">
                         ${isInWatchlist(movie.id) ? '✓ Saved' : '+ Watchlist'}
@@ -143,7 +144,7 @@ function renderHeroSlider() {
     `).join('');
 
     dots.innerHTML = featuredList.map((_, idx) => `
-        <div class="hero-dot ${idx === 0 ? 'active' : ''}" onclick="goToHeroSlide(${idx})"></div>
+        <button type="button" class="hero-dot ${idx === 0 ? 'active' : ''}" onclick="goToHeroSlide(${idx})" aria-label="Go to featured title ${idx + 1}"></button>
     `).join('');
 
     startHeroTimer();
@@ -174,7 +175,7 @@ function renderTop10Rail(list = currentCatalog) {
 
     const top10Items = list.slice(0, 10);
     rail.innerHTML = top10Items.map((movie, idx) => `
-        <div class="top10-card" onclick="openPlayerModal('${movie.id}', '${movie.type}')">
+        <div class="top10-card" role="button" tabindex="0" aria-label="Number ${idx + 1}: play ${String(movie.title).replace(/"/g, '&quot;')}" onclick="openPlayerModal('${movie.id}', '${movie.type}')" onkeydown="handleCardKey(event, '${movie.id}', '${movie.type}')">
             <span class="rank-number">${idx + 1}</span>
             <div class="movie-card" style="margin-left: 15px;">
                 <div class="poster-wrapper">
@@ -269,9 +270,16 @@ function renderSeriesGrid(seriesList = null) {
     grid.innerHTML = list.map(show => createMovieCardHTML(show)).join('');
 }
 
+// Enter and Space activate a card the same way a click does.
+function handleCardKey(event, id, type) {
+    if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Spacebar') return;
+    event.preventDefault();
+    openPlayerModal(id, type);
+}
+
 function createMovieCardHTML(movie) {
     return `
-        <div class="movie-card" onclick="openPlayerModal('${movie.id}', '${movie.type || 'movie'}')">
+        <div class="movie-card" role="button" tabindex="0" aria-label="Play ${String(movie.title).replace(/"/g, '&quot;')}" onclick="openPlayerModal('${movie.id}', '${movie.type || 'movie'}')" onkeydown="handleCardKey(event, '${movie.id}', '${movie.type || 'movie'}')">
             <div class="poster-wrapper">
                 <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy">
                 <span class="card-badge-top">★ ${movie.rating}</span>
@@ -1380,7 +1388,7 @@ function toggleTvMode() {
     const isTv = document.body.classList.toggle("tv-mode");
     localStorage.setItem("wavemirror_tv_mode", isTv ? "true" : "false");
     updateTvModeButtons();
-    showToast(isTv ? "📺 Smart TV Mode Activated (10-Foot UI)" : "🖥️ Standard Web UI Restored");
+    showToast(isTv ? "Smart TV mode on — 10-foot UI" : "Standard web UI restored");
     if (isTv) {
         focusFirstTvElement();
     }
@@ -1390,7 +1398,7 @@ function updateTvModeButtons() {
     const isTv = document.body.classList.contains("tv-mode");
     const btns = document.querySelectorAll(".tv-mode-btn");
     btns.forEach(btn => {
-        btn.innerHTML = isTv ? "📺 Exit TV Mode" : "📺 TV Mode";
+        btn.innerHTML = (isTv ? "<svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12.5\" rx=\"2\"/><path d=\"M8 21h8\"/></svg> Exit TV Mode" : "<svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12.5\" rx=\"2\"/><path d=\"M8 21h8\"/></svg> TV Mode");
         btn.classList.toggle("active", isTv);
     });
 }

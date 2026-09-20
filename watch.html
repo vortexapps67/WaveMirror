@@ -8,7 +8,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..800&family=Inter:opsz,wght@14..32,300..800&display=swap" rel="stylesheet">
     
     <!-- Stylesheets -->
     <link rel="stylesheet" href="styles.css">
@@ -55,9 +55,8 @@
             transition: var(--transition);
         }
         .watch-search-input:focus {
-            border-color: var(--primary-cyan);
-            background: rgba(14, 19, 32, 0.9);
-            box-shadow: 0 0 18px rgba(6, 182, 212, 0.25);
+            border-color: var(--line-strong);
+            background: var(--surface-3);
         }
         .watch-search-icon {
             position: absolute;
@@ -97,7 +96,7 @@
             color: #fff;
         }
         .watch-search-item:hover {
-            background: rgba(99, 102, 241, 0.15);
+            background: var(--surface-2);
         }
         .watch-search-item img {
             width: 38px;
@@ -145,10 +144,8 @@
             text-decoration: none;
             color: inherit;
         }
-        .similar-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary-cyan);
-            box-shadow: 0 10px 25px rgba(6, 182, 212, 0.25);
+        .similar-card:hover .similar-poster {
+            box-shadow: 0 0 0 2px var(--text-main);
         }
         .similar-poster {
             width: 100%;
@@ -196,7 +193,7 @@
     <header class="watch-header-nav">
         <a href="./" style="display: flex; align-items: center; gap: 0.65rem; text-decoration: none;">
             <img src="9dff5f12-e1c4-4575-81f4-5184844ca983.png" alt="WaveMirror Logo" style="height: 36px;">
-            <span style="font-family: var(--font-heading); font-size: 1.45rem; font-weight: 700; color: #fff; letter-spacing: -0.5px;">Wave<span style="color: var(--primary-cyan);">Mirror</span></span>
+            <span style="font-family: var(--font-display); font-size: 1.375rem; font-weight: 600; color: #fff; letter-spacing: var(--track-display);">WaveMirror</span>
         </a>
 
         <!-- Quick Live Search in Watch Page -->
@@ -207,15 +204,15 @@
         </div>
 
         <div style="display: flex; gap: 0.8rem; align-items: center;">
-            <button class="btn-secondary tv-mode-btn" onclick="toggleTvMode()" title="Toggle Smart TV 10-Foot UI (Key: T)" style="padding: 0.45rem 1.1rem; font-size: 0.85rem; border-color: var(--primary-cyan); color: #fff;">
-                📺 TV Mode
+            <button class="btn-secondary tv-mode-btn" onclick="toggleTvMode()" title="Toggle Smart TV 10-foot UI (key: T)" style="height: 36px; padding: 0 0.8rem;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12.5" rx="2"/><path d="M8 21h8"/></svg> TV Mode
             </button>
             <button class="btn-icon" onclick="toggleWatchlistDrawer()" title="Saved Watchlist" style="position: relative;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
                 <span class="badge-count" id="watchlistCount">0</span>
             </button>
-            <a href="./" class="btn-secondary" style="padding: 0.45rem 1.1rem; font-size: 0.85rem; border-color: var(--border-glass); justify-content: center; text-decoration: none;">
-                🏠 Explore Catalog
+            <a href="./" class="btn-secondary" style="height: 36px; padding: 0 0.8rem; text-decoration: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Explore Catalog
             </a>
         </div>
     </header>
@@ -227,7 +224,7 @@
             <div class="shield-bar">
                 <div class="shield-status-pill">
                     <span class="status-dot-live"></span>
-                    <span id="shieldStatus">🛡️ Popup Shield Active</span>
+                    <span id="shieldStatus">Popup shield active</span>
                 </div>
                 <div class="player-quick-tools">
                     <button class="btn-tool cast-btn" id="castBtn" onclick="initiateChromecast()" title="Cast directly to Chromecast / Smart TV">
@@ -243,7 +240,7 @@
                     <button class="btn-tool" onclick="closeAdOverlay()" title="Clear overlays and refresh stream">
                         ⚡ Clear Ads
                     </button>
-                    <button class="btn-tool" id="modalWatchPartyBtn" onclick="startWatchPartyFromPlayer()" style="border-color: var(--primary-cyan); color: #fff;">
+                    <button class="btn-tool" id="modalWatchPartyBtn" onclick="startWatchPartyFromPlayer()">
                         🍿 Watch Party
                     </button>
                 </div>
@@ -274,11 +271,11 @@
         <div id="tvControls" class="tv-controls-bar hidden" style="display: none;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary-cyan);">Season:</label>
+                    <label style="font-size: var(--fs-xs); font-weight: 500; color: var(--text-muted);">Season</label>
                     <select id="seasonSelect" onchange="updateTvStream()" class="select-dropdown"></select>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label style="font-size: 0.85rem; font-weight: 700; color: var(--primary-cyan);">Episode:</label>
+                    <label style="font-size: var(--fs-xs); font-weight: 500; color: var(--text-muted);">Episode</label>
                     <select id="episodeSelect" onchange="updateTvStream()" class="select-dropdown"></select>
                 </div>
             </div>
@@ -296,13 +293,13 @@
                 <button class="server-btn" onclick="loadServer(5, this)"><span class="status-dot-live"></span> Server 5 (autoembed) <span class="server-tag">AUTO</span></button>
                 <button class="server-btn" onclick="loadServer(6, this)"><span class="status-dot-live"></span> Server 6 (2embed) <span class="server-tag">BACKUP</span></button>
             </div>
-            <span style="font-size: 0.75rem; color: var(--primary-cyan); font-weight: 600;">⚡ Instant Engine Switch</span>
+            <span style="font-size: var(--fs-2xs); color: var(--text-muted); font-weight: 500;">Instant engine switch</span>
         </div>
 
         <!-- Bookmark / Progress Bar -->
         <div class="bookmark-bar" style="margin-bottom: 1.5rem;">
             <span style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.45rem;">
-                ⏱️ Elapsed: <strong id="playerSessionTimeDisplay" style="color: var(--primary-cyan); font-size: 0.9rem;">00:00</strong>
+                Elapsed <strong id="playerSessionTimeDisplay" style="color: var(--text-main); font-size: var(--fs-xs); font-variant-numeric: tabular-nums;">00:00</strong>
                 <span id="playerSavedBookmarkNotice" style="color: var(--text-dim); margin-left: 0.4rem;">(Auto-saved)</span>
             </span>
             <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
@@ -316,7 +313,7 @@
         <!-- Media Info Details -->
         <div class="watch-details-section">
             <div>
-                <h1 id="modalTitle" style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem; letter-spacing: -0.5px;">Loading Stream...</h1>
+                <h1 id="modalTitle" style="font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 700; color: #fff; margin-bottom: 0.5rem; letter-spacing: var(--track-display); line-height: var(--leading-display);">Loading Stream...</h1>
                 <div style="display: flex; gap: 1.2rem; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.2rem;" id="modalMeta">
                     <span id="modalYear">----</span>
                     <span id="modalRating" style="color: var(--primary-gold); font-weight: 700;">★ --</span>
@@ -344,7 +341,7 @@
                     </div>
                     <div>
                         <span style="color: var(--text-muted); display: block; margin-bottom: 0.2rem;">Genres</span>
-                        <strong id="modalGenres" style="color: var(--primary-cyan); font-weight: 500;">--</strong>
+                        <strong id="modalGenres" style="color: var(--text-soft); font-weight: 500;">--</strong>
                     </div>
                 </div>
             </div>
@@ -382,11 +379,11 @@
         <div class="modal-box" style="max-width: 480px; padding: 2rem;">
             <button class="modal-close-btn" onclick="closeCastModal()">&times;</button>
             <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem;">
-                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-cyan); font-size: 1.4rem;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--surface-3); display: flex; align-items: center; justify-content: center; color: var(--text-main); font-size: 1.2rem;">
                     📺
                 </div>
                 <div>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: #fff;">Cast to Smart TV</h3>
+                    <h3 style="font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; letter-spacing: var(--track-tight); color: #fff;">Cast to Smart TV</h3>
                     <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;">Chromecast, AirPlay & Smart TV Mirroring</p>
                 </div>
             </div>
@@ -395,7 +392,7 @@
             <div id="castStatusDeck" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.4rem;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
                     <span style="font-size: 0.85rem; color: var(--text-muted);">Status:</span>
-                    <span id="castStatusBadge" style="font-size: 0.82rem; font-weight: 700; color: var(--primary-cyan); display: flex; align-items: center; gap: 0.35rem;">
+                    <span id="castStatusBadge" style="font-size: var(--fs-xs); font-weight: 500; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem;">
                         <span class="status-dot-live"></span> Ready to Connect
                     </span>
                 </div>
@@ -415,7 +412,7 @@
                 </div>
 
                 <div style="display: flex; gap: 0.6rem;">
-                    <input type="text" id="tvDirectUrlInput" readonly style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.8rem; padding: 0.5rem 0.8rem; font-family: monospace;">
+                    <input type="text" id="tvDirectUrlInput" readonly style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); color: #fff; font-size: 0.8rem; padding: 0.5rem 0.8rem; font-family: var(--font-mono);">
                     <button class="btn-secondary" onclick="copyTvStreamUrl()" style="padding: 0.5rem 0.9rem; font-size: 0.8rem;">
                         📋 Copy Link
                     </button>

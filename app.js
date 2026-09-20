@@ -1770,7 +1770,7 @@ function updatePillThumbPosition(tabName, immediate = false) {
     }
 }
 
-// Initialize Apple Liquid Glass Live Dragging, Fluid Magnification & Free-Floating 2D Dock
+// Initialize Apple Liquid Glass Live Dragging & Fluid Magnification Selector
 function initPillDockSlider() {
     const dock = document.getElementById("appBottomNav");
     const thumb = document.getElementById("pillSliderThumb");
@@ -1780,13 +1780,8 @@ function initPillDockSlider() {
     const navItems = Array.from(dock.querySelectorAll(".mobile-nav-item"));
 
     let isPointerDown = false;
-    let gestureMode = "pending"; // 'pending' | 'slider-scrub' | 'dock-drag'
     let startX = 0;
     let startY = 0;
-    let dockStartLeft = 0;
-    let dockStartTop = 0;
-    let currentDockLeft = 0;
-    let currentDockTop = 0;
     let lastX = 0;
     let lastTime = 0;
     let currentVx = 0;
@@ -1795,47 +1790,9 @@ function initPillDockSlider() {
     let animFrame = null;
     let activePointerId = null;
 
-    // Restore saved dock position if available
-    function restoreDockPosition() {
-        try {
-            const saved = localStorage.getItem("wavemirror_dock_pos");
-            if (saved) {
-                const pos = JSON.parse(saved);
-                const maxLeft = Math.max(8, window.innerWidth - dock.offsetWidth - 8);
-                const maxTop = Math.max(8, window.innerHeight - dock.offsetHeight - 8);
-                const safeLeft = Math.max(8, Math.min(maxLeft, pos.left));
-                const safeTop = Math.max(8, Math.min(maxTop, pos.top));
-                dock.style.left = `${safeLeft}px`;
-                dock.style.top = `${safeTop}px`;
-                dock.style.bottom = "auto";
-                dock.style.transform = "none";
-            }
-        } catch (e) {}
-    }
-
-    // Reset dock to standard bottom-center
-    function resetDockPosition() {
-        localStorage.removeItem("wavemirror_dock_pos");
-        dock.style.left = "50%";
-        dock.style.top = "auto";
-        dock.style.bottom = "max(16px, calc(12px + env(safe-area-inset-bottom, 0px)))";
-        dock.style.transform = "translateX(-50%)";
-        updatePillThumbPosition(currentAppTab, true);
-        showToast("Floating dock reset to bottom center");
-    }
-
-    // Double-click to reset position
-    dock.addEventListener("dblclick", resetDockPosition);
-
-    setTimeout(() => {
-        restoreDockPosition();
-        updatePillThumbPosition(currentAppTab, true);
-    }, 60);
-
-    window.addEventListener("resize", () => {
-        restoreDockPosition();
-        updatePillThumbPosition(currentAppTab, true);
-    }, { passive: true });
+    // Set initial position after layout renders
+    setTimeout(() => updatePillThumbPosition(currentAppTab, true), 60);
+    window.addEventListener("resize", () => updatePillThumbPosition(currentAppTab, true), { passive: true });
 
     function getIndexFromPointerX(clientX) {
         const dockRect = dock.getBoundingClientRect();
@@ -1888,7 +1845,6 @@ function initPillDockSlider() {
     function onPointerDown(e) {
         if (e.button && e.button !== 0) return;
         isPointerDown = true;
-        gestureMode = "pending";
         isCancelled = false;
         startX = e.clientX;
         startY = e.clientY;
@@ -1897,115 +1853,89 @@ function initPillDockSlider() {
         currentVx = 0;
         activePointerId = e.pointerId;
 
-        const dockRect = dock.getBoundingClientRect();
-        dockStartLeft = dockRect.left;
-        dockStartTop = dockRect.top;
-        currentDockLeft = dockStartLeft;
-        currentDockTop = dockStartTop;
-
         if (dock.setPointerCapture && e.pointerId !== undefined) {
             try { dock.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+
+        thumb.classList.add("is-dragging");
+        thumb.classList.remove("is-canceling");
+
+        const dockRect = dock.getBoundingClientRect();
+        const slotWidth = (dockRect.width - 12) / tabs.length;
+        const thumbX = calculateThumbX(e.clientX);
+        thumb.style.setProperty("--drag-x", `${thumbX}px`);
+
+        applyLiquidOptics(thumbX, slotWidth);
+
+        currentHoveredIndex = getIndexFromPointerX(e.clientX);
+        navItems.forEach((btn, idx) => {
+            btn.classList.toggle("is-hovered", idx === currentHoveredIndex);
+        });
+
+        if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
+            try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
         }
     }
 
     function onPointerMove(e) {
         if (!isPointerDown) return;
 
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
+        const now = performance.now();
+        const dt = Math.max(1, now - lastTime);
+        const instantVx = ((e.clientX - lastX) / dt) * 16.6;
+        currentVx = currentVx * 0.65 + instantVx * 0.35;
+        lastX = e.clientX;
+        lastTime = now;
 
-        // Disambiguate gesture: vertical move -> dock drag; horizontal move -> slider scrub
-        if (gestureMode === "pending") {
-            if (Math.abs(deltaY) > 9) {
-                gestureMode = "dock-drag";
-                dock.classList.add("is-floating-drag");
-                thumb.classList.remove("is-dragging");
-                if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
-                    try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
-                }
-            } else if (Math.abs(deltaX) > 6) {
-                gestureMode = "slider-scrub";
-                thumb.classList.add("is-dragging");
+        if (animFrame) cancelAnimationFrame(animFrame);
+        animFrame = requestAnimationFrame(() => {
+            isCancelled = isOutsideCancelZone(e.clientX, e.clientY);
+
+            if (isCancelled) {
+                thumb.classList.add("is-canceling");
+                navItems.forEach(btn => {
+                    btn.classList.remove("is-hovered");
+                    btn.style.removeProperty("--lens-scale");
+                    btn.style.removeProperty("--lens-ty");
+                    btn.style.removeProperty("--lens-glow");
+                });
+                currentHoveredIndex = -1;
+            } else {
                 thumb.classList.remove("is-canceling");
-            }
-        }
 
-        // Mode 1: Free Floating 2D Dock Repositioning
-        if (gestureMode === "dock-drag") {
-            const dockRect = dock.getBoundingClientRect();
-            const targetLeft = dockStartLeft + deltaX;
-            const targetTop = dockStartTop + deltaY;
+                const dockRect = dock.getBoundingClientRect();
+                const slotWidth = (dockRect.width - 12) / tabs.length;
+                const thumbX = calculateThumbX(e.clientX);
 
-            // Clamping inside viewport bounds
-            const maxLeft = Math.max(8, window.innerWidth - dockRect.width - 8);
-            const maxTop = Math.max(8, window.innerHeight - dockRect.height - 8);
-            currentDockLeft = Math.max(8, Math.min(maxLeft, targetLeft));
-            currentDockTop = Math.max(8, Math.min(maxTop, targetTop));
+                // Apple Liquid Glass Viscosity & Dynamic Stretch
+                const stretchX = 1 + Math.min(0.24, Math.abs(currentVx) * 0.014);
+                const stretchY = 1 / Math.sqrt(stretchX);
+                const skew = Math.max(-6, Math.min(6, -currentVx * 0.32));
+                const glintDeg = 90 + Math.max(-35, Math.min(35, currentVx * 1.8));
+                const glowX = 50 + Math.max(-28, Math.min(28, currentVx * 2.2));
 
-            dock.style.left = `${currentDockLeft}px`;
-            dock.style.top = `${currentDockTop}px`;
-            dock.style.bottom = "auto";
-            dock.style.transform = "scale(1.04)";
-            return;
-        }
+                thumb.style.setProperty("--drag-x", `${thumbX}px`);
+                thumb.style.setProperty("--drag-scale-x", stretchX.toFixed(3));
+                thumb.style.setProperty("--drag-scale-y", stretchY.toFixed(3));
+                thumb.style.setProperty("--drag-skew", `${skew.toFixed(2)}deg`);
+                thumb.style.setProperty("--glint-deg", `${glintDeg.toFixed(1)}deg`);
+                thumb.style.setProperty("--glass-glow-x", `${glowX.toFixed(1)}%`);
 
-        // Mode 2: Apple Liquid Glass Slider Scrubbing
-        if (gestureMode === "slider-scrub") {
-            const now = performance.now();
-            const dt = Math.max(1, now - lastTime);
-            const instantVx = ((e.clientX - lastX) / dt) * 16.6;
-            currentVx = currentVx * 0.65 + instantVx * 0.35;
-            lastX = e.clientX;
-            lastTime = now;
+                // Apply Optical Magnification Lens to Buttons
+                applyLiquidOptics(thumbX, slotWidth);
 
-            if (animFrame) cancelAnimationFrame(animFrame);
-            animFrame = requestAnimationFrame(() => {
-                isCancelled = isOutsideCancelZone(e.clientX, e.clientY);
-
-                if (isCancelled) {
-                    thumb.classList.add("is-canceling");
-                    navItems.forEach(btn => {
-                        btn.classList.remove("is-hovered");
-                        btn.style.removeProperty("--lens-scale");
-                        btn.style.removeProperty("--lens-ty");
-                        btn.style.removeProperty("--lens-glow");
+                const newHoveredIndex = getIndexFromPointerX(e.clientX);
+                if (newHoveredIndex !== currentHoveredIndex) {
+                    currentHoveredIndex = newHoveredIndex;
+                    navItems.forEach((btn, idx) => {
+                        btn.classList.toggle("is-hovered", idx === currentHoveredIndex);
                     });
-                    currentHoveredIndex = -1;
-                } else {
-                    thumb.classList.remove("is-canceling");
-
-                    const dockRect = dock.getBoundingClientRect();
-                    const slotWidth = (dockRect.width - 12) / tabs.length;
-                    const thumbX = calculateThumbX(e.clientX);
-
-                    const stretchX = 1 + Math.min(0.24, Math.abs(currentVx) * 0.014);
-                    const stretchY = 1 / Math.sqrt(stretchX);
-                    const skew = Math.max(-6, Math.min(6, -currentVx * 0.32));
-                    const glintDeg = 90 + Math.max(-35, Math.min(35, currentVx * 1.8));
-                    const glowX = 50 + Math.max(-28, Math.min(28, currentVx * 2.2));
-
-                    thumb.style.setProperty("--drag-x", `${thumbX}px`);
-                    thumb.style.setProperty("--drag-scale-x", stretchX.toFixed(3));
-                    thumb.style.setProperty("--drag-scale-y", stretchY.toFixed(3));
-                    thumb.style.setProperty("--drag-skew", `${skew.toFixed(2)}deg`);
-                    thumb.style.setProperty("--glint-deg", `${glintDeg.toFixed(1)}deg`);
-                    thumb.style.setProperty("--glass-glow-x", `${glowX.toFixed(1)}%`);
-
-                    applyLiquidOptics(thumbX, slotWidth);
-
-                    const newHoveredIndex = getIndexFromPointerX(e.clientX);
-                    if (newHoveredIndex !== currentHoveredIndex) {
-                        currentHoveredIndex = newHoveredIndex;
-                        navItems.forEach((btn, idx) => {
-                            btn.classList.toggle("is-hovered", idx === currentHoveredIndex);
-                        });
-                        if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
-                            try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
-                        }
+                    if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
+                        try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
                     }
                 }
-            });
-        }
+            }
+        });
     }
 
     function onPointerUp(e) {
@@ -2017,22 +1947,6 @@ function initPillDockSlider() {
         }
         activePointerId = null;
 
-        // If in Free Floating Dock Drag Mode: Save position and finish
-        if (gestureMode === "dock-drag") {
-            dock.classList.remove("is-floating-drag");
-            dock.style.transform = "none";
-            localStorage.setItem("wavemirror_dock_pos", JSON.stringify({
-                left: currentDockLeft,
-                top: currentDockTop
-            }));
-            if (window.WaveMirrorNative && window.WaveMirrorNative.triggerHaptic) {
-                try { window.WaveMirrorNative.triggerHaptic(); } catch (err) {}
-            }
-            gestureMode = "pending";
-            return;
-        }
-
-        // Clean up slider state
         thumb.classList.remove("is-dragging");
         thumb.classList.remove("is-canceling");
         navItems.forEach(btn => {
@@ -2042,18 +1956,16 @@ function initPillDockSlider() {
             btn.style.removeProperty("--lens-glow");
         });
 
-        if (gestureMode === "slider-scrub") {
-            if (isCancelled || isOutsideCancelZone(e.clientX, e.clientY)) {
-                updatePillThumbPosition(currentAppTab);
-                gestureMode = "pending";
-                return;
-            }
+        // If cancelled (dragged away / outside) or released outside dock zone:
+        if (isCancelled || isOutsideCancelZone(e.clientX, e.clientY)) {
+            updatePillThumbPosition(currentAppTab);
+            return;
         }
 
         const finalIndex = getIndexFromPointerX(e.clientX);
         const selectedTab = tabs[finalIndex] || currentAppTab;
+
         switchAppTab(selectedTab);
-        gestureMode = "pending";
     }
 
     function onPointerCancel() {
@@ -2063,8 +1975,6 @@ function initPillDockSlider() {
             try { dock.releasePointerCapture(activePointerId); } catch (err) {}
         }
         activePointerId = null;
-        dock.classList.remove("is-floating-drag");
-        dock.style.transform = "none";
         thumb.classList.remove("is-dragging");
         thumb.classList.remove("is-canceling");
         navItems.forEach(btn => {
@@ -2074,7 +1984,6 @@ function initPillDockSlider() {
             btn.style.removeProperty("--lens-glow");
         });
         updatePillThumbPosition(currentAppTab);
-        gestureMode = "pending";
     }
 
     // Touch & Pointer Listeners

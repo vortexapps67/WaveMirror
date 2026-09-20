@@ -1056,73 +1056,80 @@
 
     <!-- Download Station Modal -->
     <div class="modal-backdrop" id="downloadModal">
-        <div class="modal-box" style="max-width: 520px; padding: 1.75rem;">
+        <div class="modal-box" style="max-width: 500px; padding: 1.75rem;">
             <button class="modal-close-btn" onclick="closeDownloadModal()">&times;</button>
             <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.25rem;">
-                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-emerald); font-size: 1.2rem;">
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent-emerald); font-size: 1.3rem;">
                     📥
                 </div>
                 <div>
-                    <h3 style="font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; letter-spacing: var(--track-tight); color: #fff;" id="downloadModalTitle">Download Media</h3>
-                    <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;" id="downloadModalSubtitle">High-Speed MP4, Direct Stream & Torrent Mirrors</p>
+                    <h3 style="font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; letter-spacing: var(--track-tight); color: #fff;" id="downloadModalTitle">Download .MP4 Video</h3>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;" id="downloadModalSubtitle">Direct offline video files (.mp4) for phone, tablet & PC</p>
                 </div>
             </div>
 
-            <!-- Direct Download Mirrors -->
-            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;">
-                <!-- Direct High-Speed Mirror 1 -->
-                <a class="download-option-card" id="downloadDirectLink1" target="_blank" rel="noopener noreferrer">
+            <!-- Direct MP4 Quality Download List -->
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+                <!-- 1080p Full HD MP4 -->
+                <div class="download-option-card" onclick="triggerDirectMp4Download('1080p')">
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <span style="font-size: 1.3rem;">⚡</span>
+                        <span style="font-size: 1.4rem;">🎬</span>
                         <div>
-                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Direct Fast Stream 1 (1080p Ultra HD)</div>
-                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Vidlink Direct Server • 1-Click Stream & Save</div>
+                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">1080p Full HD (.mp4)</div>
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Crisp 1080p • Surround Audio • Direct Save</div>
                         </div>
                     </div>
-                    <span class="btn-primary" style="padding: 0.35rem 0.75rem; font-size: var(--fs-2xs);">Direct Link</span>
-                </a>
-
-                <!-- Direct High-Speed Mirror 2 -->
-                <a class="download-option-card" id="downloadDirectLink2" target="_blank" rel="noopener noreferrer">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <span style="font-size: 1.3rem;">🚀</span>
-                        <div>
-                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Direct Fast Stream 2 (VidSrc 1080p/720p)</div>
-                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">VidSrc CDN Gateway • Mobile & PC Ready</div>
-                        </div>
-                    </div>
-                    <span class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: var(--fs-2xs);">Direct Link</span>
-                </a>
-
-                <!-- Dynamic 1-Click Torrent & Magnet File Downloads -->
-                <div id="directTorrentsSection" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: var(--fs-xs); font-weight: 600; color: #fff; display: flex; align-items: center; gap: 0.4rem;">
-                            <span>🧲</span> Direct 1-Click Torrent / Magnet Files
-                        </span>
-                        <span id="torrentSearchStatus" style="font-size: var(--fs-2xs); color: var(--primary-cyan);">Checking mirrors...</span>
-                    </div>
-                    <div id="directTorrentButtons" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <!-- Dynamically filled with 1080p, 720p, 4K download buttons -->
-                    </div>
+                    <button class="btn-primary" style="padding: 0.4rem 0.85rem; font-size: var(--fs-2xs);">
+                        ⬇️ Save .MP4
+                    </button>
                 </div>
 
-                <!-- Subtitles Option -->
-                <a class="download-option-card" id="downloadSubtitlesLink" target="_blank" rel="noopener noreferrer">
+                <!-- 720p HD MP4 -->
+                <div class="download-option-card" onclick="triggerDirectMp4Download('720p')">
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <span style="font-size: 1.3rem;">💬</span>
+                        <span style="font-size: 1.4rem;">⚡</span>
                         <div>
-                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Download Subtitles (SRT / VTT)</div>
-                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Multi-language subtitles from OpenSubtitles</div>
+                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">720p HD (.mp4)</div>
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Fast download • Standard quality • Mobile optimized</div>
                         </div>
                     </div>
-                    <span class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: var(--fs-2xs);">Get SRT</span>
-                </a>
+                    <button class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: var(--fs-2xs);">
+                        ⬇️ Save .MP4
+                    </button>
+                </div>
+
+                <!-- 480p Mobile MP4 -->
+                <div class="download-option-card" onclick="triggerDirectMp4Download('480p')">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.4rem;">📱</span>
+                        <div>
+                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">480p Mobile (.mp4)</div>
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Lightweight • Lowest data usage • Fast offline save</div>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: var(--fs-2xs);">
+                        ⬇️ Save .MP4
+                    </button>
+                </div>
+
+                <!-- Subtitles (.SRT) Option -->
+                <div class="download-option-card" onclick="triggerSubtitlesDownload()">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 1.4rem;">💬</span>
+                        <div>
+                            <div style="font-weight: 600; font-size: var(--fs-xs); color: #fff;">Subtitles (.SRT / .VTT)</div>
+                            <div style="font-size: var(--fs-2xs); color: var(--text-muted);">Download synchronized subtitles in all languages</div>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: var(--fs-2xs);">
+                        Get SRT
+                    </button>
+                </div>
             </div>
 
             <!-- Download Tip Box -->
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-xs); padding: 0.75rem 0.9rem; font-size: var(--fs-2xs); color: var(--text-muted); line-height: 1.5;">
-                💡 <strong>Tip:</strong> If a direct download link begins streaming in your browser player, tap the <strong>⋮</strong> menu on the video player and choose <strong>"Download"</strong> or right-click <strong>"Save video as..."</strong>.
+                💡 <strong>Direct Download:</strong> Clicking any quality option will immediately download the <code>.mp4</code> file to your device's <strong>Downloads</strong> folder.
             </div>
         </div>
     </div>

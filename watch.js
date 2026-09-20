@@ -1050,17 +1050,11 @@ function copyTvStreamUrl() {
     }
 }
 
-/* ---------------- 📥 Download Station Engine ---------------- */
-async function openDownloadModal() {
+/* ---------------- 📥 Direct .MP4 Video Downloader Engine ---------------- */
+function openDownloadModal() {
     const modal = document.getElementById("downloadModal");
     const modalTitle = document.getElementById("downloadModalTitle");
     const modalSub = document.getElementById("downloadModalSubtitle");
-
-    const link1 = document.getElementById("downloadDirectLink1");
-    const link2 = document.getElementById("downloadDirectLink2");
-    const subLink = document.getElementById("downloadSubtitlesLink");
-    const torrentButtons = document.getElementById("directTorrentButtons");
-    const searchStatus = document.getElementById("torrentSearchStatus");
 
     const movieTitle = activeMovie?.title || "Media Stream";
     const year = activeMovie?.year || "2024";
@@ -1069,86 +1063,14 @@ async function openDownloadModal() {
 
     if (modalTitle) {
         modalTitle.innerText = currentType === "tv" 
-            ? `Download: ${movieTitle} (S${s} E${e})` 
+            ? `Download: ${movieTitle} (S${s}:E${e})` 
             : `Download: ${movieTitle} (${year})`;
     }
 
     if (modalSub) {
         modalSub.innerText = currentType === "tv"
-            ? `Season ${s}, Episode ${e} • High-Speed Direct & Torrent Mirrors`
-            : `4K Ultra HD & 1080p Full HD Mirrors`;
-    }
-
-    // Mirror 1: Vidlink Direct Stream Gateway
-    if (link1) {
-        if (currentType === "tv") {
-            link1.href = `https://vidlink.pro/tv/${currentId}/${s}/${e}`;
-        } else {
-            link1.href = `https://vidlink.pro/movie/${currentId}`;
-        }
-    }
-
-    // Mirror 2: VidSrc Stream Gateway
-    if (link2) {
-        if (currentType === "tv") {
-            link2.href = `https://vidsrc.xyz/embed/tv/${currentId}/${s}-${e}`;
-        } else {
-            link2.href = currentImdb ? `https://vidsrc.xyz/embed/movie/${currentImdb}` : `https://vidsrc.xyz/embed/movie/${currentId}`;
-        }
-    }
-
-    // OpenSubtitles Finder
-    if (subLink) {
-        const subQuery = currentType === "tv" 
-            ? `${movieTitle} Season ${s} Episode ${e}` 
-            : `${movieTitle} ${year}`;
-        subLink.href = `https://www.opensubtitles.org/en/search2/sublanguageid-all/moviename-${encodeURIComponent(subQuery)}`;
-    }
-
-    // Populate Torrent & Direct Files
-    if (torrentButtons && searchStatus) {
-        torrentButtons.innerHTML = `<span style="font-size: var(--fs-2xs); color: var(--text-muted);">Finding high-speed mirrors...</span>`;
-        searchStatus.innerText = "Searching...";
-
-        try {
-            if (currentType === "movie") {
-                const queryTerm = currentImdb || movieTitle;
-                const res = await fetch(`https://yts.mx/api/v2/list_movies.json?query_term=${encodeURIComponent(queryTerm)}&limit=1`);
-                const data = await res.json();
-                const matched = data?.data?.movies?.[0];
-
-                if (matched && matched.torrents && matched.torrents.length > 0) {
-                    searchStatus.innerText = "✓ Direct Mirrors Found";
-                    searchStatus.style.color = "var(--accent-emerald)";
-
-                    torrentButtons.innerHTML = matched.torrents.map(t => {
-                        const quality = t.quality || "1080p";
-                        const size = t.size || "1.5 GB";
-                        const type = t.type ? t.type.toUpperCase() : "WEB";
-                        const downloadUrl = t.url;
-                        const magnetLink = `magnet:?xt=urn:btih:${t.hash}&dn=${encodeURIComponent(matched.title + ' ' + quality)}&tr=udp://open.demonii.com:1337/announce&tr=udp://tracker.openbittorrent.com:80&tr=udp://tracker.coppersurfer.tk:6969&tr=udp://glotorrents.pw:6969/announce&tr=udp://tracker.opentrackr.org:1337/announce`;
-
-                        return `
-                            <div style="display: flex; gap: 0.35rem; align-items: center; background: var(--surface-2); padding: 4px 8px; border-radius: var(--radius-xs); border: 1px solid var(--border-glass);">
-                                <a href="${downloadUrl}" class="btn-primary" style="padding: 0.3rem 0.6rem; font-size: 11px; text-decoration: none;" title="Download .torrent file">
-                                    ⬇️ ${quality} (${size})
-                                </a>
-                                <a href="${magnetLink}" class="btn-secondary" style="padding: 0.3rem 0.5rem; font-size: 11px; text-decoration: none;" title="Instant Magnet Link for uTorrent/qBittorrent">
-                                    🧲 Magnet
-                                </a>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    fallbackTorrentButton(movieTitle, year, s, e, torrentButtons, searchStatus);
-                }
-            } else {
-                fallbackTorrentButton(movieTitle, year, s, e, torrentButtons, searchStatus);
-            }
-        } catch (err) {
-            console.warn("[Download] Torrent resolver error:", err);
-            fallbackTorrentButton(movieTitle, year, s, e, torrentButtons, searchStatus);
-        }
+            ? `Season ${s}, Episode ${e} • Direct .MP4 file save for offline playback`
+            : `Direct offline .MP4 video files (1080p, 720p, 480p)`;
     }
 
     if (modal) {
@@ -1157,20 +1079,57 @@ async function openDownloadModal() {
     }
 }
 
-function fallbackTorrentButton(title, year, s, e, container, statusElem) {
-    if (statusElem) {
-        statusElem.innerText = "1-Click Search Ready";
-        statusElem.style.color = "var(--primary-cyan)";
-    }
-    const query = currentType === "tv" 
-        ? `${title} S${String(s).padStart(2, '0')}E${String(e).padStart(2, '0')} 1080p` 
-        : `${title} ${year} 1080p`;
+function triggerDirectMp4Download(quality = "1080p") {
+    const movieTitle = activeMovie?.title || "Movie";
+    const year = activeMovie?.year || "2024";
+    const s = document.getElementById("seasonSelect")?.value || 1;
+    const e = document.getElementById("episodeSelect")?.value || 1;
 
-    container.innerHTML = `
-        <a href="https://1337x.to/search/${encodeURIComponent(query)}/1/" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 0.4rem 0.8rem; font-size: var(--fs-2xs); text-decoration: none;">
-            🧲 1-Click Search Torrents (${query})
-        </a>
-    `;
+    // Clean filename for saving
+    const safeTitle = movieTitle.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_');
+    const fileName = currentType === "tv" 
+        ? `${safeTitle}_S${String(s).padStart(2, '0')}E${String(e).padStart(2, '0')}_${quality}_WaveMirror.mp4`
+        : `${safeTitle}_${year}_${quality}_WaveMirror.mp4`;
+
+    showToast(`📥 Starting direct download: ${fileName}`);
+
+    // Direct MP4 stream download endpoints
+    let downloadUrl = "";
+    if (currentType === "tv") {
+        downloadUrl = `https://dl.vidsrc.vip/tv/${currentId}/${s}/${e}`;
+    } else {
+        downloadUrl = currentImdb 
+            ? `https://dl.vidsrc.vip/movie/${currentImdb}` 
+            : `https://dl.vidsrc.vip/movie/${currentId}`;
+    }
+
+    // Trigger direct browser download
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = fileName;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    setTimeout(() => {
+        closeDownloadModal();
+    }, 400);
+}
+
+function triggerSubtitlesDownload() {
+    const movieTitle = activeMovie?.title || "Media Stream";
+    const year = activeMovie?.year || "2024";
+    const s = document.getElementById("seasonSelect")?.value || 1;
+    const e = document.getElementById("episodeSelect")?.value || 1;
+
+    const subQuery = currentType === "tv" 
+        ? `${movieTitle} Season ${s} Episode ${e}` 
+        : `${movieTitle} ${year}`;
+    
+    const subUrl = `https://www.opensubtitles.org/en/search2/sublanguageid-all/moviename-${encodeURIComponent(subQuery)}`;
+    window.open(subUrl, "_blank", "noopener,noreferrer");
 }
 
 function closeDownloadModal() {

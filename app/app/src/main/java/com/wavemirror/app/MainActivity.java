@@ -1,16 +1,20 @@
 package com.wavemirror.app;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -24,7 +28,8 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TARGET_URL = "https://wavemirror.vercel.app/";
+    // Load bundled local assets for full independent offline/instant startup
+    private static final String TARGET_URL = "file:///android_asset/index.html";
 
     private WebView webView;
     private SwipeRefreshLayout swipeRefresh;
@@ -38,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Keep screen on during video playback & hardware acceleration
+        // Keep screen on during streaming playback & optimize hardware acceleration
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         webView = findViewById(R.id.webView);
@@ -53,22 +58,25 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl(TARGET_URL);
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     private void setupWebView() {
         WebSettings settings = webView.getSettings();
         
-        // Essential Web App & Hardware Acceleration Settings
+        // Essential Web App, Storage & Hardware Acceleration Settings
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setSupportZoom(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         // Native Popup & Ad Shield Settings
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
@@ -79,7 +87,10 @@ public class MainActivity extends AppCompatActivity {
             CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
         }
 
-        // WebView Client for In-App Navigation & Popup Blocking
+        // Bridge native Android capabilities into web context
+        webView.addJavascriptInterface(new WaveMirrorBridge(this), "WaveMirrorNative");
+
+        // WebView Client for Asset Routing, Direct Downloads & Ad Protection
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -93,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
                 if (splashOverlay.getVisibility() == View.VISIBLE) {
                     splashOverlay.animate()
                             .alpha(0f)
-                            .setDuration(400)
+                            .setDuration(350)
                             .withEndAction(() -> splashOverlay.setVisibility(View.GONE));
                 }
             }
@@ -101,24 +112,51 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                // Block external ad domain popups/redirects that attempt to navigate away from WaveMirror
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    if (url.contains("wavemirror") || url.contains("vidsrc") || url.contains("autoembed") || url.contains("youtube")) {
-                        return false; // Allow legitimate stream hosts
-                    } else {
-                        Toast.makeText(MainActivity.this, "🛡️ External Ad Redirect Blocked", Toast.LENGTH_SHORT).show();
-                        return true; // Block ad redirect
+
+                // Handle magnet & custom URI schemes directly
+                if (url.startsWith("magnet:") || url.startsWith("intent:")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent);
+                        return true;
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "No external app found to handle this link", Toast.LENGTH_SHORT).show();
+                        return true;
                     }
                 }
+
+                // Handle local asset navigations
+                if (url.startsWith("file:///android_asset/")) {
+                    return false;
+                }
+
+                // Handle TMDB API, safe stream providers & embeds
+                if (url.contains("themoviedb.org") || 
+                    url.contains("vidsrc") || 
+                    url.contains("autoembed") || 
+                    url.contains("embed.su") || 
+                    url.contains("vidlink") || 
+                    url.contains("2embed") || 
+                    url.contains("superstream") || 
+                    url.contains("youtube") || 
+                    url.contains("google") || 
+                    url.contains("gstatic") ||
+                    url.contains("tmdb.org")) {
+                    return false;
+                }
+
+                // Block suspicious popups/redirects
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    Toast.makeText(MainActivity.this, "🛡️ External Ad Redirect Blocked", Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+
                 return false;
             }
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
-                if (request.isForMainFrame()) {
-                    Toast.makeText(MainActivity.this, "Network connection issue. Pull to refresh.", Toast.LENGTH_SHORT).show();
-                }
             }
         });
 
@@ -174,7 +212,9 @@ public class MainActivity extends AppCompatActivity {
     private void setupSwipeRefresh() {
         swipeRefresh.setColorSchemeResources(R.color.primary_cyan, R.color.primary_violet);
         swipeRefresh.setProgressBackgroundColorSchemeResource(R.color.bg_glass);
-        swipeRefresh.setOnRefreshListener(() -> webView.reload());
+        swipeRefresh.setOnRefreshListener(() -> {
+            webView.reload();
+        });
     }
 
     private void setupBackNavigation() {
@@ -183,14 +223,28 @@ public class MainActivity extends AppCompatActivity {
             public void handleOnBackPressed() {
                 if (customView != null) {
                     // Exit fullscreen video
-                    webView.getWebChromeClient().onHideCustomView();
-                } else if (webView.canGoBack()) {
-                    // Navigate WebView history
-                    webView.goBack();
-                } else {
-                    // Exit app
-                    finish();
+                    if (webView.getWebChromeClient() != null) {
+                        webView.getWebChromeClient().onHideCustomView();
+                    }
+                    return;
                 }
+
+                // Check if web app modal/drawer is open
+                webView.evaluateJavascript("typeof handleAndroidBack === 'function' ? handleAndroidBack() : false;", new ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String value) {
+                        if ("true".equals(value)) {
+                            // Handled by in-page navigation (e.g. closed drawer or modal)
+                            return;
+                        }
+
+                        if (webView.canGoBack()) {
+                            webView.goBack();
+                        } else {
+                            finish();
+                        }
+                    }
+                });
             }
         });
     }

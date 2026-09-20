@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>404 - Scene Not Found | WaveMirror</title>
+    <meta name="description" content="The page or movie you are looking for could not be found. Search and stream thousands of trending movies and series on WaveMirror.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="wavemirror_new.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..800&family=Inter:opsz,wght@14..32,300..800&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        body.page-404 {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .error-stage {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: calc(var(--header-h, 72px) + 2rem) 1.5rem 4rem;
+            position: relative;
+        }
+
+        .error-card {
+            max-width: 640px;
+            width: 100%;
+            background: rgba(10, 14, 26, 0.85);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 3rem 2.5rem;
+            text-align: center;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85);
+            position: relative;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+
+        .error-ambient-glow {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.18) 0%, rgba(14, 165, 233, 0.08) 45%, transparent 70%);
+            filter: blur(50px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .error-code {
+            font-family: var(--font-display);
+            font-size: clamp(5rem, 15vw, 8.5rem);
+            font-weight: 800;
+            letter-spacing: -3px;
+            line-height: 1;
+            background: linear-gradient(180deg, #ffffff 20%, rgba(255, 255, 255, 0.3) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .error-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.35rem 0.9rem;
+            border-radius: var(--radius-full);
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            font-size: var(--fs-xs);
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+        }
+
+        .error-title {
+            font-family: var(--font-display);
+            font-size: clamp(1.4rem, 3.5vw, 2rem);
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: var(--track-display);
+            margin-bottom: 0.75rem;
+        }
+
+        .error-description {
+            font-size: var(--fs-sm);
+            line-height: 1.65;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* 404 Live Search */
+        .error-search-wrap {
+            position: relative;
+            max-width: 460px;
+            margin: 0 auto 2rem;
+        }
+
+        .error-search-input {
+            width: 100%;
+            height: 46px;
+            padding: 0 1rem 0 2.6rem;
+            background: var(--surface-1);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-full);
+            color: #fff;
+            font-size: var(--fs-sm);
+            font-family: var(--font-body);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .error-search-input:focus {
+            border-color: var(--line-strong);
+            background: var(--surface-2);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+        }
+
+        .error-search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .error-search-results {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: #090c16;
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            max-height: 320px;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.85);
+            z-index: 100;
+            text-align: left;
+        }
+
+        .error-search-results.active {
+            display: flex;
+        }
+
+        .error-search-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.65rem 0.9rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            color: #fff;
+        }
+
+        .error-search-item:hover {
+            background: var(--surface-2);
+        }
+
+        .error-search-item img {
+            width: 38px;
+            height: 52px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .quick-tags {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .quick-tag-pill {
+            padding: 0.35rem 0.85rem;
+            border-radius: var(--radius-full);
+            background: var(--surface-1);
+            border: 1px solid var(--border-glass);
+            color: var(--text-muted);
+            font-size: var(--fs-2xs);
+            text-decoration: none;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .quick-tag-pill:hover {
+            background: var(--surface-2);
+            color: #fff;
+            border-color: var(--line-strong);
+        }
+
+        @media (max-width: 576px) {
+            .error-card {
+                padding: 2rem 1.25rem;
+            }
+            .error-actions .btn-primary,
+            .error-actions .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body class="page-404">
+    <!-- Navbar Header -->
+    <header class="navbar" id="navbar" style="position: fixed; top: 0; left: 0; right: 0; background: var(--bg-glass-heavy); backdrop-filter: blur(20px);">
+        <div class="nav-left">
+            <a class="brand-logo" href="./" style="text-decoration: none;">
+                <img src="wavemirror_new.png" alt="WaveMirror Logo" class="brand-logo-img">
+                <span class="brand-title">WaveMirror</span>
+                <span class="brand-badge">100% FREE</span>
+            </a>
+        </div>
+        <div class="nav-right">
+            <a href="./" class="btn-primary" style="height: 38px; padding: 0 1rem; text-decoration: none; font-size: var(--fs-xs);">
+                🏠 Home Catalog
+            </a>
+        </div>
+    </header>
+
+    <!-- Error Stage -->
+    <main class="error-stage">
+        <div class="error-ambient-glow"></div>
+        <div class="error-card">
+            <div class="error-badge">
+                <span>🎬</span> Error 404
+            </div>
+            
+            <div class="error-code">404</div>
+            <h1 class="error-title">Scene Not Found</h1>
+            <p class="error-description">
+                The reel you were looking for was cut from the final cut, moved to another stage, or never existed in this timeline.
+            </p>
+
+            <!-- 404 In-Page Live Movie Search -->
+            <div class="error-search-wrap">
+                <svg class="error-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="errorSearchInput" class="error-search-input" placeholder="Search any movie or show to stream..." oninput="handle404Search(this.value)">
+                <div id="errorSearchResults" class="error-search-results"></div>
+            </div>
+
+            <!-- Primary Actions -->
+            <div class="error-actions">
+                <a href="./" class="btn-primary" style="padding: 0.65rem 1.4rem; font-size: var(--fs-sm); text-decoration: none;">
+                    🏠 Return to Catalog
+                </a>
+                <a href="./#watch-party" class="btn-secondary" style="padding: 0.65rem 1.4rem; font-size: var(--fs-sm); text-decoration: none;">
+                    🍿 Host Watch Party
+                </a>
+            </div>
+
+            <!-- Quick Category Explore Tags -->
+            <div class="quick-tags">
+                <a href="./#explore" class="quick-tag-pill">🔥 Trending Movies</a>
+                <a href="./#top10" class="quick-tag-pill">🏆 Top 10 Today</a>
+                <a href="./#explore" class="quick-tag-pill">⚡ Series & TV</a>
+                <a href="./#free-pass" class="quick-tag-pill">🎟️ 100% Free Pass</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Simple Footer -->
+    <footer class="footer" style="padding: 1.5rem 0; border-top: 1px solid var(--border-glass); text-align: center; font-size: var(--fs-2xs); color: var(--text-muted);">
+        <p>© 2026 WaveMirror. All movies and series powered by TMDB API. Stream 100% Free.</p>
+    </footer>
+
+    <script src="data.js"></script>
+    <script>
+        let errorSearchDebounce = null;
+
+        function handle404Search(query) {
+            clearTimeout(errorSearchDebounce);
+            const container = document.getElementById("errorSearchResults");
+            if (!container) return;
+
+            if (!query || query.trim().length < 2) {
+                container.innerHTML = "";
+                container.classList.remove("active");
+                return;
+            }
+
+            errorSearchDebounce = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=4b52b21cf5742fe0eb8cbda16eb722c1&query=${encodeURIComponent(query.trim())}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const valid = (data.results || []).filter(item => (item.media_type === "movie" || item.media_type === "tv") && (item.poster_path || item.backdrop_path));
+
+                    if (valid.length === 0) {
+                        container.innerHTML = `<div style="padding: 1rem; color: var(--text-muted); font-size: 0.85rem; text-align: center;">No titles found for "${query}"</div>`;
+                        container.classList.add("active");
+                        return;
+                    }
+
+                    container.innerHTML = valid.slice(0, 5).map(item => {
+                        const title = item.title || item.name;
+                        const type = item.media_type || "movie";
+                        const year = (item.release_date || item.first_air_date || "2024").substring(0, 4);
+                        const poster = item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : `https://image.tmdb.org/t/p/w300${item.backdrop_path}`;
+                        const rating = item.vote_average ? item.vote_average.toFixed(1) : "8.0";
+
+                        return `
+                            <a class="error-search-item" href="watch.html?id=${item.id}&type=${type}">
+                                <img src="${poster}" alt="${title}">
+                                <div style="flex: 1; overflow: hidden;">
+                                    <div style="font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;">${title}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                                        <span style="text-transform: uppercase; color: var(--text-main); font-weight: 600;">${type}</span> • ${year} • ★ ${rating}
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                    container.classList.add("active");
+                } catch (e) {
+                    console.warn("[404] Search error:", e);
+                }
+            }, 300);
+        }
+
+        // Close search on click outside
+        document.addEventListener("click", (e) => {
+            const wrap = document.querySelector(".error-search-wrap");
+            const results = document.getElementById("errorSearchResults");
+            if (wrap && !wrap.contains(e.target) && results) {
+                results.classList.remove("active");
+            }
+        });
+    </script>
+</body>
+</html>

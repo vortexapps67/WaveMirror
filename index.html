@@ -61,6 +61,21 @@
         </div>
     </div>
 
+    <!-- Global Cloud-Synced Announcement Ticker (Top of Page) -->
+    <div id="globalAnnouncementBanner" class="announcement-ticker" role="region" aria-label="Announcement Ticker">
+        <div class="ticker-badge">
+            <span class="ticker-dot"></span>
+            <span>LIVE UPDATE</span>
+        </div>
+        <div class="ticker-viewport">
+            <div class="ticker-track" id="tickerTrack">
+                <span id="announcementText" class="ticker-item">🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback, 1-click APK downloads & Watch Party sync active.</span>
+                <span class="ticker-item ticker-clone">🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback, 1-click APK downloads & Watch Party sync active.</span>
+            </div>
+        </div>
+        <button class="ticker-close" onclick="dismissAnnouncement()" aria-label="Dismiss Announcement" title="Dismiss">&times;</button>
+    </div>
+
     <!-- Navigation Bar -->
     <header class="navbar" id="navbar">
         <div class="nav-left">
@@ -124,21 +139,6 @@
             </button>
         </div>
     </header>
-
-    <!-- Global Cloud-Synced Announcement Ticker -->
-    <div id="globalAnnouncementBanner" class="announcement-ticker" role="region" aria-label="Announcement Ticker">
-        <div class="ticker-badge">
-            <span class="ticker-dot"></span>
-            <span>LIVE UPDATE</span>
-        </div>
-        <div class="ticker-viewport">
-            <div class="ticker-track" id="tickerTrack">
-                <span id="announcementText" class="ticker-item">🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback, 1-click APK downloads & Watch Party sync active.</span>
-                <span class="ticker-item ticker-clone">🚀 WaveMirror v1.0.1 is live! Ultra 4K HDR playback, 1-click APK downloads & Watch Party sync active.</span>
-            </div>
-        </div>
-        <button class="ticker-close" onclick="dismissAnnouncement()" aria-label="Dismiss Announcement" title="Dismiss">&times;</button>
-    </div>
 
     <!-- App Quick Category & Genre Bar -->
     <div class="app-category-bar" id="appCategoryBar">

@@ -506,22 +506,22 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 /* ---------------- Navigation Bar ---------------- */
 .navbar {
-    position: fixed;
+    position: sticky;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1000;
-    height: var(--nav-h);
-    padding: 0 var(--gutter);
+    min-height: 64px;
+    padding: 0 var(--gutter, 1.5rem);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-5);
+    gap: var(--space-5, 1rem);
     background: var(--bg-glass);
     backdrop-filter: blur(16px) saturate(140%);
     -webkit-backdrop-filter: blur(16px) saturate(140%);
     border-bottom: 1px solid transparent;
-    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+    transition: background var(--dur, 0.2s) var(--ease, ease), border-color var(--dur, 0.2s) var(--ease, ease);
     transform: translate3d(0, 0, 0);
 }
 /* The bar only asserts itself once content slides under it */

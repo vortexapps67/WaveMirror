@@ -456,7 +456,7 @@ function removeWatchlistItem(id) {
     }
 }
 
-/* ---------------- In-App Social Profile Modal (@vortex.apps) ---------------- */
+/* ---------------- In-App Social Profile Modal ---------------- */
 function openSocialModal() {
     const modal = document.getElementById("socialModal");
     if (modal) modal.classList.add("active");
@@ -468,7 +468,7 @@ function closeSocialModal() {
 }
 
 function copyInstagramHandle() {
-    const handle = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
+    const handle = localStorage.getItem("wavemirror_custom_ig") || "";
     navigator.clipboard.writeText(handle);
     showToast(`Instagram handle ${handle} copied to clipboard!`);
 }
@@ -1215,8 +1215,8 @@ function checkAdminPassword() {
         if (appNameInput) appNameInput.value = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
         if (apkUrlInput) apkUrlInput.value = localStorage.getItem("wavemirror_custom_apk_url") || "app/build/outputs/apk/release/app-release.apk";
         if (countInput) countInput.value = localStorage.getItem("wavemirror_base_download_count") || "";
-        if (igInput) igInput.value = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
-        if (ghRepoInput) ghRepoInput.value = localStorage.getItem("wavemirror_github_repo") || "vortexapps67/WaveMirror";
+        if (igInput) igInput.value = localStorage.getItem("wavemirror_custom_ig") || "";
+        if (ghRepoInput) ghRepoInput.value = localStorage.getItem("wavemirror_github_repo") || "beatlabs790/WaveMirror";
         if (backendEndpointInput) backendEndpointInput.value = getCloudEndpoint();
 
         try {
@@ -1248,7 +1248,7 @@ function getCloudEndpoint() {
 
 function loadCustomAppSettings() {
     const customName = localStorage.getItem("wavemirror_custom_app_name") || "WaveMirror";
-    const customIg = localStorage.getItem("wavemirror_custom_ig") || "@vortex.apps";
+    const customIg = localStorage.getItem("wavemirror_custom_ig") || "";
     const customBase = localStorage.getItem("wavemirror_base_download_count");
     const baseCount = (customBase !== null && customBase !== undefined && customBase !== "" && !isNaN(parseInt(customBase))) ? parseInt(customBase) : 0;
 
@@ -1331,7 +1331,7 @@ function dismissAnnouncement() {
 let currentGitHubReleaseData = null;
 
 async function syncGitHubDownloadsAndReleases(forceRefresh = false) {
-    const defaultRepo = "vortexapps67/WaveMirror";
+    const defaultRepo = "beatlabs790/WaveMirror";
     const repo = localStorage.getItem("wavemirror_github_repo") || defaultRepo;
     const cacheKey = `wavemirror_gh_cache_${repo}`;
     const cacheTimeKey = `wavemirror_gh_cache_time_${repo}`;
@@ -1829,8 +1829,8 @@ async function saveAdminCustomSettings() {
         appName: nameInput || "WaveMirror",
         apkUrl: apkInput || localStorage.getItem("wavemirror_custom_apk_url") || "app/build/outputs/apk/release/app-release.apk",
         baseDownloadCount: validBaseCount,
-        igHandle: igInput || "@vortex.apps",
-        githubRepo: ghRepoInput || "vortexapps67/WaveMirror",
+        igHandle: igInput || "",
+        githubRepo: ghRepoInput || "beatlabs790/WaveMirror",
         announcement: announcementObj,
         lastUpdated: new Date().toISOString()
     };
@@ -1913,7 +1913,7 @@ function downloadAppApk() {
 
 function openMirrorDownload() {
     showToast("⚡ Opening Fast Mirror APK Server...");
-    const repo = localStorage.getItem("wavemirror_github_repo") || "vortexapps67/WaveMirror";
+    const repo = localStorage.getItem("wavemirror_github_repo") || "beatlabs790/WaveMirror";
     const apkUrl = localStorage.getItem("wavemirror_custom_apk_url") || `https://github.com/${repo}/releases/latest`;
     window.open(apkUrl, "_blank");
 }

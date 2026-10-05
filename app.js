@@ -1,4 +1,4 @@
-// WaveMirror Application Engine - Powered by TMDB API (apikey: fea469f5e20796590292a227a92a2fef)
+﻿// WaveMirror Application Engine - Powered by TMDB API (apikey: fea469f5e20796590292a227a92a2fef)
 
 let currentCatalog = [...FEATURED_MOVIES];
 let activeGenre = "All";
@@ -225,7 +225,7 @@ function renderTop10Rail(list = currentCatalog) {
             <span class="rank-number">${idx + 1}</span>
             <div class="movie-card" style="margin-left: 15px;">
                 <div class="poster-wrapper">
-                    <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy">
+                    <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy" decoding="async">
                     <span class="card-quality-badge">${movie.quality || '4K'}</span>
                     <div class="card-overlay">
                         <div class="play-icon-btn">
@@ -328,7 +328,7 @@ function createMovieCardHTML(movie) {
     return `
         <div class="movie-card" role="button" tabindex="0" aria-label="Play ${String(movie.title).replace(/"/g, '&quot;')}" onclick="openPlayerModal('${movie.id}', '${movie.type || 'movie'}')" onkeydown="handleCardKey(event, '${movie.id}', '${movie.type || 'movie'}')">
             <div class="poster-wrapper">
-                <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy">
+                <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy" decoding="async">
                 <span class="card-badge-top">★ ${movie.rating}</span>
                 <span class="card-quality-badge">${movie.quality || '4K'}</span>
                 <div class="card-overlay">
@@ -516,13 +516,33 @@ function scrollToSection(id) {
 
 function initScrollEffects() {
     const navbar = document.getElementById("navbar");
+    if (!navbar) return;
+
+    // Only the class flips; the boolean is cached so we never touch the
+    // DOM when the threshold has not been crossed, and passive:true means
+    // the listener can never delay a scroll gesture.
+    let isScrolled = false;
+    const syncNavbar = () => {
+        const next = window.scrollY > 50;
+        if (next === isScrolled) return;
+        isScrolled = next;
+        navbar.classList.toggle("scrolled", next);
+    };
+
+    // Coalesce to one write per frame. A raw scroll handler here fires up
+    // to 100x/sec on trackpads and touches the classList every time,
+    // which is pure wasted style recalculation.
+    let scrollQueued = false;
     window.addEventListener("scroll", () => {
-        if (window.scrollY > 50) {
-            navbar.classList.add("scrolled");
-        } else {
-            navbar.classList.remove("scrolled");
-        }
-    });
+        if (scrollQueued) return;
+        scrollQueued = true;
+        requestAnimationFrame(() => {
+            scrollQueued = false;
+            syncNavbar();
+        });
+    }, { passive: true });
+
+    syncNavbar();
 
     window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
@@ -768,7 +788,7 @@ function renderContinueWatching() {
         return `
             <div class="continue-card" onclick="openPlayerModal('${item.id}', '${item.type || 'movie'}', true)">
                 <div class="continue-thumbnail-wrap">
-                    <img class="continue-thumbnail" src="${thumb}" alt="${item.title}" loading="lazy" onerror="this.src='${item.poster}'">
+                    <img class="continue-thumbnail" src="${thumb}" alt="${item.title}" loading="lazy" decoding="async" onerror="this.src='${item.poster}'">
                     <div class="continue-overlay">
                         <div class="continue-play-badge">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -2182,6 +2202,21 @@ function toggleTvMode() {
     }
 }
 
+/* Floating theatre button on the home screen. If a title is selected it
+   carries it along; otherwise the theatre opens empty so you can pick a
+   film from the collection inside. */
+function openTheatreFab() {
+    const id = window.currentId || "";
+    const type = window.currentType || "movie";
+    const q = new URLSearchParams();
+    if (id) {
+        q.set("id", id);
+        q.set("type", type);
+    }
+    q.set("from", window.location.pathname.split("/").pop() || "index.html");
+    window.location.href = "theatre.html" + (q.toString() ? "?" + q.toString() : "");
+}
+
 function updateTvModeButtons() {
     const isTv = document.body.classList.contains("tv-mode");
     const btns = document.querySelectorAll(".tv-mode-btn");
@@ -2691,7 +2726,7 @@ function renderMoviesViewGrid(items) {
     grid.innerHTML = items.map(movie => `
         <div class="movie-card" role="button" tabindex="0" aria-label="Play ${String(movie.title).replace(/"/g, '&quot;')}" onclick="openPlayerModal('${movie.id}', 'movie')" onkeydown="handleCardKey(event, '${movie.id}', 'movie')">
             <div class="poster-wrapper">
-                <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy">
+                <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy" decoding="async">
                 <span class="card-quality-badge">${movie.quality || '4K'}</span>
                 <div class="card-overlay">
                     <div class="play-icon-btn">
@@ -2766,7 +2801,7 @@ function renderSeriesViewGrid(items) {
     grid.innerHTML = items.map(show => `
         <div class="movie-card" role="button" tabindex="0" aria-label="Play ${String(show.title).replace(/"/g, '&quot;')}" onclick="openPlayerModal('${show.id}', 'tv')" onkeydown="handleCardKey(event, '${show.id}', 'tv')">
             <div class="poster-wrapper">
-                <img class="poster-img" src="${show.poster}" alt="${show.title}" loading="lazy">
+                <img class="poster-img" src="${show.poster}" alt="${show.title}" loading="lazy" decoding="async">
                 <span class="card-quality-badge" style="background: rgba(99, 102, 241, 0.85); color: #fff;">SERIES</span>
                 <div class="card-overlay">
                     <div class="play-icon-btn">
@@ -2849,7 +2884,7 @@ async function applyDiscoverFilters() {
     grid.innerHTML = results.map(item => `
         <div class="movie-card" role="button" tabindex="0" aria-label="Play ${String(item.title).replace(/"/g, '&quot;')}" onclick="openPlayerModal('${item.id}', '${item.type || 'movie'}')" onkeydown="handleCardKey(event, '${item.id}', '${item.type || 'movie'}')">
             <div class="poster-wrapper">
-                <img class="poster-img" src="${item.poster}" alt="${item.title}" loading="lazy">
+                <img class="poster-img" src="${item.poster}" alt="${item.title}" loading="lazy" decoding="async">
                 <span class="card-quality-badge">${(item.type || 'movie').toUpperCase()}</span>
                 <div class="card-overlay">
                     <div class="play-icon-btn">
@@ -2892,7 +2927,7 @@ function renderLibraryView() {
         } else {
             continueGrid.innerHTML = continueList.map(item => `
                 <div class="continue-card" onclick="openPlayerModal('${item.id}', '${item.type || 'movie'}', true)">
-                    <img class="continue-backdrop" src="${item.backdrop || item.poster}" alt="${item.title}" loading="lazy">
+                    <img class="continue-backdrop" src="${item.backdrop || item.poster}" alt="${item.title}" loading="lazy" decoding="async">
                     <div class="continue-content">
                         <div class="continue-title">${item.title}</div>
                         <div class="continue-meta">
@@ -2921,7 +2956,7 @@ function renderLibraryView() {
             watchlistGrid.innerHTML = watchlist.map(movie => `
                 <div class="movie-card" role="button" tabindex="0" aria-label="Play ${String(movie.title).replace(/"/g, '&quot;')}" onclick="openPlayerModal('${movie.id}', '${movie.type || 'movie'}')">
                     <div class="poster-wrapper">
-                        <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy">
+                        <img class="poster-img" src="${movie.poster}" alt="${movie.title}" loading="lazy" decoding="async">
                         <span class="card-quality-badge">${movie.quality || '4K'}</span>
                         <div class="card-overlay">
                             <div class="play-icon-btn">

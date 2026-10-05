@@ -1,4 +1,4 @@
-// watch.js - WaveMirror Dedicated Streaming Hub Controller
+﻿// watch.js - WaveMirror Dedicated Streaming Hub Controller
 const CONTINUE_WATCHING_KEY = "wavemirror_continue_watching";
 
 let activeMovie = null;
@@ -291,7 +291,7 @@ async function fetchAndRenderSimilar(id, type = "movie") {
 
             return `
                 <a class="similar-card" href="watch.html?id=${item.id}&type=${type}">
-                    <img class="similar-poster" src="${poster}" alt="${title}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=${encodeURIComponent(title)}'">
+                    <img class="similar-poster" src="${poster}" alt="${title}" loading="lazy" decoding="async" onerror="this.src='https://via.placeholder.com/300x450?text=${encodeURIComponent(title)}'">
                     <div class="similar-info">
                         <div class="similar-title" title="${title}">${title}</div>
                         <div class="similar-sub">
@@ -1180,3 +1180,43 @@ function closeDownloadModal() {
     if (modal) modal.classList.remove("active");
     document.body.style.overflow = "auto";
 }
+
+/* ================================================================
+   3D THEATRE HANDOFF
+   ---------------------------------------------------------------
+   Opens theatre.html for whatever is currently selected, including the
+   server you chose here, so the theatre picks up the same title playing
+   the same way rather than resetting you to the default provider.
+   ================================================================ */
+function openTheatreFromPlayer() {
+    if (!currentId) {
+        showToast("Open a title first, then choose the 3D Theatre.");
+        return;
+    }
+    const type = currentType === "tv" ? "tv" : "movie";
+    const q = new URLSearchParams();
+    q.set("id", currentId);
+    q.set("type", type);
+    if (type === "tv") {
+        q.set("season", document.getElementById("seasonSelect")?.value || 1);
+        q.set("episode", document.getElementById("episodeSelect")?.value || 1);
+    }
+    // Keep the server in step with this player's, so "Change server"
+    // means the same thing in both places.
+    q.set("server", THEATRE_SERVER_KEYS[currentServer - 1] || THEATRE_SERVER_KEYS[0]);
+    // Come back to this player, with the same title preselected.
+    q.set("from", window.location.pathname.split("/").pop() + "?id=" + encodeURIComponent(currentId) + "&type=" + encodeURIComponent(type));
+    window.location.href = "theatre.html?" + q.toString();
+}
+
+/* Index-aligned with the six servers in loadServer() above. Kept here
+   because the theatre's SERVERS list lives in theatre-screen.js and this
+   file is not a module, so it cannot import it. */
+const THEATRE_SERVER_KEYS = [
+    "vidlink",       // 1 vidlink.pro
+    "vidsrc-xyz",    // 2 vidsrc.xyz
+    "vidsrc-cc",     // 3 vidsrc.cc
+    "embed-su",      // 4 embed.su
+    "autoembed",     // 5 player.autoembed.cc
+    "2embed"         // 6 2embed.cc
+];

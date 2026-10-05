@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>3D Theatre | WaveMirror</title>
+
+    <!-- Fonts: self-hosted, same as the rest of the site -->
+    <link rel="preload" href="fonts/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="fonts/fonts.css">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Three.js as an ES module, pinned. Swap this URL to change renderer. -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <style>
+        /* ================================================================
+           THEATRE ROUTE - all shell styling lives here.
+           Colours come from the site tokens in styles.css so the theatre
+           matches the rest of WaveMirror without duplicating the palette.
+           ================================================================ */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            overscroll-behavior: none;
+        }
+
+        /* The panels, provider strip and play/mute buttons rely on the HTML
+           `hidden` attribute for open/close, but these elements also carry
+           display:flex on their class. That class wins over the browser's
+           own [hidden] rule, so without this override closed panels never
+           actually close. */
+        [hidden] { display: none !important; }
+        body { padding-bottom: 0; }
+
+        #theatre-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;   /* we handle look/move ourselves */
+            cursor: grab;
+        }
+        #theatre-canvas.is-dragging { cursor: grabbing; }
+
+        /* ---- Chrome that floats over the scene ---- */
+        .th-hud {
+            position: fixed;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .th-hud > * { pointer-events: auto; }
+
+        /* Top bar */
+        .th-top {
+            top: 0; left: 0; right: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.85rem var(--gutter);
+            background: linear-gradient(180deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0) 100%);
+            transition: opacity var(--dur) var(--ease);
+        }
+        .th-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.8rem;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--line-strong);
+            background: rgba(20,20,23,0.72);
+            color: var(--text-main);
+            font-size: var(--fs-xs);
+            font-weight: 550;
+            cursor: pointer;
+            transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+            white-space: nowrap;
+        }
+        .th-back:hover { background: var(--surface-3); border-color: var(--accent); }
+
+        .th-title-block { min-width: 0; flex: 1; }
+        .th-title {
+            font-family: var(--font-display);
+            font-size: var(--fs-sm);
+            font-weight: 650;
+            letter-spacing: var(--track-snug);
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .th-subtitle {
+            font-size: var(--fs-micro);
+            color: var(--text-muted);
+            letter-spacing: var(--track-normal);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Presence pill */
+        .th-presence {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--line);
+            background: rgba(20,20,23,0.72);
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            color: var(--text-soft);
+            white-space: nowrap;
+        }
+        .th-presence .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--text-dim);
+            transition: background var(--dur) var(--ease);
+        }
+        .th-presence.is-live .dot { background: var(--online); }
+        .th-host-badge {
+            padding: 0.18rem 0.45rem;
+            border-radius: var(--radius-xs);
+            background: var(--accent-quiet);
+            border: 1px solid rgba(99,102,241,0.35);
+            color: var(--accent-hover);
+            font-size: var(--fs-micro);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: var(--track-caps);
+        }
+
+        /* Bottom transport */
+        .th-bottom {
+            left: 0; right: 0; bottom: 0;
+            padding: 2.5rem var(--gutter) 1.15rem;
+            background: linear-gradient(0deg, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0) 100%);
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+            transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+        }
+        .th-bottom.is-idle {
+            opacity: 0;
+            transform: translateY(12px);
+            pointer-events: none;
+        }
+
+        /* Seek row */
+        .th-seek-row { display: flex; align-items: center; gap: 0.75rem; }
+        .th-time {
+            font-family: var(--font-mono);
+            font-size: var(--fs-micro);
+            color: var(--text-soft);
+            font-variant-numeric: tabular-nums;
+            min-width: 44px;
+            text-align: center;
+        }
+        input[type="range"].th-range {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 4px;
+            border-radius: var(--radius-full);
+            background: linear-gradient(90deg, var(--accent) var(--pct, 0%), rgba(255,255,255,0.16) var(--pct, 0%));
+            outline: none;
+            cursor: pointer;
+        }
+        input[type="range"].th-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 13px; height: 13px;
+            border-radius: 50%;
+            background: #fff;
+            border: none;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+        }
+        input[type="range"].th-range::-moz-range-thumb {
+            width: 13px; height: 13px;
+            border-radius: 50%;
+            background: #fff;
+            border: none;
+        }
+
+        /* Button row */
+        .th-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .th-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            height: 34px;
+            min-width: 34px;
+            padding: 0 0.7rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: rgba(24,24,28,0.8);
+            color: var(--text-main);
+            font-size: var(--fs-xs);
+            font-weight: 550;
+            cursor: pointer;
+            transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+        }
+        .th-btn:hover { background: var(--surface-3); border-color: var(--line-strong); }
+        .th-btn.is-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        .th-btn.is-primary:hover { background: var(--accent-hover); }
+        .th-btn[aria-pressed="true"] {
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+        .th-spacer { flex: 1; }
+        .th-vol { width: 84px; }
+
+        /* Movement hint */
+        .th-hint {
+            position: fixed;
+            left: 50%;
+            bottom: 8.5rem;
+            transform: translateX(-50%);
+            z-index: 18;
+            padding: 0.5rem 0.9rem;
+            border-radius: var(--radius-full);
+            background: rgba(12,12,14,0.86);
+            border: 1px solid var(--line);
+            color: var(--text-soft);
+            font-size: var(--fs-micro);
+            letter-spacing: var(--track-normal);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity var(--dur) var(--ease);
+            pointer-events: none;
+        }
+        .th-hint.is-visible { opacity: 1; }
+        .th-hint kbd {
+            font-family: var(--font-mono);
+            font-size: 0.92em;
+            padding: 0.1rem 0.32rem;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.09);
+            border: 1px solid var(--line);
+            color: var(--text-main);
+        }
+
+        /* ---- Source panel (see the note about iframe embeds) ---- */
+        .th-panel {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 40;
+            width: min(94vw, 460px);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--line-strong);
+            background: var(--surface-1);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .th-panel h2 {
+            font-size: var(--fs-lg);
+            letter-spacing: var(--track-snug);
+        }
+        .th-panel p {
+            font-size: var(--fs-xs);
+            line-height: var(--leading-snug);
+            color: var(--text-soft);
+        }
+        .th-panel .note {
+            padding: 0.7rem 0.85rem;
+            border-radius: var(--radius-sm);
+            background: rgba(242,139,74,0.08);
+            border: 1px solid rgba(242,139,74,0.28);
+            color: #f0b98a;
+            font-size: var(--fs-2xs);
+            line-height: var(--leading-snug);
+        }
+        .th-field {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .th-field input[type="url"], .th-field input[type="text"] {
+            flex: 1;
+            min-width: 0;
+            padding: 0.55rem 0.75rem;
+            border-radius: var(--radius-xs);
+            border: 1px solid var(--border-glass);
+            background: rgba(0,0,0,0.42);
+            color: #fff;
+            font-size: var(--fs-xs);
+            font-family: var(--font-mono);
+            outline: none;
+        }
+        .th-field input:focus { border-color: var(--accent); }
+        .th-file {
+            padding: 0.7rem;
+            border: 1px dashed var(--line-strong);
+            border-radius: var(--radius-sm);
+            background: rgba(0,0,0,0.24);
+            font-size: var(--fs-xs);
+            color: var(--text-soft);
+            cursor: pointer;
+            text-align: center;
+        }
+        .th-file:hover { border-color: var(--accent); color: var(--text-main); }
+
+        /* ---- Party / chat slide-over ---- */
+        .th-party {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            z-index: 30;
+            width: min(88vw, 340px);
+            display: flex;
+            flex-direction: column;
+            background: rgba(10,10,11,0.94);
+            border-left: 1px solid var(--line);
+            transform: translateX(100%);
+            transition: transform var(--transition-smooth);
+        }
+        .th-party.is-open { transform: translateX(0); }
+        .th-party-head {
+            padding: 1rem 1.1rem 0.85rem;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+        .th-party-head h3 {
+            font-size: var(--fs-sm);
+            letter-spacing: var(--track-snug);
+        }
+        .th-roomcode {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.7rem;
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+        }
+        .th-roomcode code {
+            font-family: var(--font-mono);
+            font-size: var(--fs-sm);
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            color: var(--accent-hover);
+            flex: 1;
+        }
+        .th-tabs { display: flex; gap: 0.35rem; }
+        .th-tab {
+            flex: 1;
+            padding: 0.4rem;
+            border-radius: var(--radius-xs);
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: var(--track-caps);
+            cursor: pointer;
+        }
+        .th-tab.is-active {
+            background: var(--surface-2);
+            border-color: var(--line);
+            color: var(--text-main);
+        }
+        .th-panel-body { flex: 1; overflow-y: auto; padding: 0.85rem 1.1rem; }
+        .th-panel-body[hidden] { display: none; }
+
+        .th-members { display: flex; flex-direction: column; gap: 0.5rem; }
+        .th-member {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.5rem 0.6rem;
+            border-radius: var(--radius-sm);
+            background: var(--surface-1);
+            border: 1px solid var(--line);
+            font-size: var(--fs-xs);
+        }
+        .th-member .av {
+            width: 26px; height: 26px;
+            display: grid; place-items: center;
+            border-radius: 50%;
+            background: var(--surface-3);
+            font-size: 0.9rem;
+        }
+        .th-member .nm {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-main);
+        }
+
+        .th-chat-log {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            margin-bottom: 0.85rem;
+        }
+        .th-msg { max-width: 88%; }
+        .th-msg .who {
+            font-size: var(--fs-micro);
+            font-weight: 650;
+            color: var(--text-muted);
+            margin-bottom: 0.15rem;
+        }
+        .th-msg .bub {
+            padding: 0.45rem 0.65rem;
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            font-size: var(--fs-xs);
+            line-height: var(--leading-snug);
+            color: var(--text-main);
+            overflow-wrap: anywhere;
+        }
+        .th-msg.is-self { align-self: flex-end; text-align: right; }
+        .th-msg.is-system .bub {
+            background: transparent;
+            border-style: dashed;
+            color: var(--text-muted);
+            font-size: var(--fs-2xs);
+        }
+        .th-chat-form {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.85rem 1.1rem 1.1rem;
+            border-top: 1px solid var(--line);
+        }
+        .th-chat-form input {
+            flex: 1;
+            min-width: 0;
+            padding: 0.5rem 0.7rem;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--line);
+            background: var(--surface-2);
+            color: #fff;
+            font-size: var(--fs-xs);
+            outline: none;
+        }
+        .th-chat-form input:focus { border-color: var(--accent); }
+
+        /* ---- Enter / loading gate ---- */
+        .th-gate {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.15rem;
+            padding: 2rem;
+            text-align: center;
+            background:
+                radial-gradient(ellipse 70% 50% at 50% 42%, rgba(99,102,241,0.14) 0%, transparent 70%),
+                #05050a;
+            transition: opacity 420ms var(--ease), visibility 420ms var(--ease);
+        }
+        .th-gate.is-gone { opacity: 0; visibility: hidden; pointer-events: none; }
+        .th-gate-logo {
+            width: 62px; height: 62px;
+            border-radius: 18px;
+            overflow: hidden;
+        }
+        .th-gate-logo img { width: 100%; height: 100%; object-fit: cover; }
+        .th-gate h1 {
+            font-size: var(--fs-2xl);
+            letter-spacing: var(--track-display);
+            line-height: var(--leading-display);
+        }
+        .th-gate .tag {
+            font-size: var(--fs-micro);
+            font-weight: 700;
+            letter-spacing: var(--track-caps);
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .th-enter {
+            padding: 0.7rem 1.6rem;
+            border-radius: var(--radius-full);
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            font-size: var(--fs-sm);
+            font-weight: 650;
+            cursor: pointer;
+            transition: background var(--dur) var(--ease), transform var(--dur) var(--ease);
+        }
+        .th-enter:hover { background: var(--accent-hover); }
+        .th-enter:disabled { opacity: 0.5; cursor: wait; }
+        .th-gate-note {
+            max-width: 42ch;
+            font-size: var(--fs-2xs);
+            line-height: var(--leading-snug);
+            color: var(--text-dim);
+        }
+        .th-spinner {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.14);
+            border-top-color: var(--accent);
+            animation: th-spin 900ms linear infinite;
+        }
+        @keyframes th-spin { to { transform: rotate(360deg); } }
+
+        /* Touch movement stick: drag to walk, one finger. Dragging anywhere
+           else on the canvas looks around instead. */
+        .th-stick {
+            position: fixed;
+            left: 1.15rem;
+            bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+            z-index: 19;
+            width: 112px;
+            height: 112px;
+            border-radius: 50%;
+            border: 1px solid var(--line-strong);
+            background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, rgba(0,0,0,0.35) 70%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            touch-action: none;
+        }
+        .th-stick-knob {
+            position: absolute;
+            left: 50%; top: 50%;
+            width: 46px; height: 46px;
+            margin: -23px 0 0 -23px;
+            border-radius: 50%;
+            background: rgba(99,102,241,0.55);
+            border: 1px solid rgba(255,255,255,0.28);
+            transition: transform 90ms linear;
+        }
+        @media (pointer: coarse) {
+            .th-stick { display: block; }
+        }
+
+        @media (max-width: 768px) {
+            .th-title { font-size: var(--fs-2xs); }
+            .th-vol { display: none; }
+            .th-bottom { padding-bottom: calc(1.15rem + env(safe-area-inset-bottom, 0px)); }
+            .th-hint { display: none; }
+            .th-party { width: min(92vw, 320px); }
+        }
+
+        /* ================================================================
+           FILM PICKER  -  catalogue search + server choice
+           The screen can show a third-party iframe through the CSS3D quad,
+           so a catalogue title is a first-class way to watch here, not a
+           fallback. See theatre-screen.js for why it is an iframe.
+           ================================================================ */
+        .th-panel.is-wide { width: min(96vw, 720px); }
+        .th-panel-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .th-panel-head .eyebrow {
+            font-size: var(--fs-micro);
+            letter-spacing: var(--track-wide);
+            text-transform: uppercase;
+            color: var(--accent-hover);
+            margin-bottom: 0.25rem;
+        }
+
+        .th-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+            gap: 0.7rem;
+            max-height: min(46vh, 340px);
+            overflow-y: auto;
+            padding: 0.15rem;
+            scrollbar-width: thin;
+        }
+        .th-result {
+            display: block;
+            padding: 0;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            overflow: hidden;
+            cursor: pointer;
+            text-align: left;
+            transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+        }
+        .th-result:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .th-result img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            object-fit: cover;
+            background: var(--surface-3);
+        }
+        .th-result .nm {
+            display: block;
+            padding: 0.4rem 0.45rem 0.5rem;
+            font-size: var(--fs-2xs);
+            font-weight: 550;
+            line-height: 1.25;
+            color: var(--text-main);
+        }
+        .th-result .mt {
+            display: block;
+            padding: 0 0.45rem 0.5rem;
+            font-size: var(--fs-micro);
+            color: var(--text-muted);
+        }
+        .th-empty {
+            grid-column: 1 / -1;
+            padding: 1.4rem 0;
+            text-align: center;
+            font-size: var(--fs-xs);
+            color: var(--text-muted);
+        }
+
+        /* Server choice, shown once a title is picked. */
+        .th-servers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+        .th-server {
+            padding: 0.4rem 0.7rem;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--line);
+            background: rgba(24,24,28,0.8);
+            color: var(--text-soft);
+            font-size: var(--fs-2xs);
+            font-weight: 550;
+            cursor: pointer;
+            transition: all var(--dur-fast) var(--ease);
+        }
+        .th-server:hover { border-color: var(--line-strong); color: var(--text-main); }
+        .th-server.is-active {
+            border-color: var(--accent);
+            color: #fff;
+            background: rgba(242,139,74,0.16);
+        }
+        .th-server .tag {
+            display: block;
+            font-size: var(--fs-micro);
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .th-server.is-active .tag { color: var(--accent-hover); }
+
+        /* Provider status, so a dead server is never a silent black screen. */
+        .th-provider {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.7rem;
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            font-size: var(--fs-2xs);
+            color: var(--text-soft);
+        }
+        .th-provider .led {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            flex: none;
+        }
+        .th-provider[data-status="opening"] .led { background: #e0b341; animation: th-pulse 1.1s ease-in-out infinite; }
+        .th-provider[data-status="opened"]  .led { background: #4ade80; }
+        .th-provider[data-status="slow"]    .led { background: #f97316; }
+        .th-provider[data-status="error"]   .led { background: #ef4444; }
+        @keyframes th-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+        /* ================================================================
+           SEAT PICKER  -  lettered rows, one note per seat
+           ================================================================ */
+        .seat-plan {
+            padding: 1rem 0.9rem 0.7rem;
+            border-radius: var(--radius-md);
+            background: linear-gradient(180deg, rgba(242,139,74,0.09), rgba(0,0,0,0.2));
+            border: 1px solid var(--line);
+        }
+        .seat-screen {
+            height: 5px;
+            margin: 0 auto 0.85rem;
+            width: 78%;
+            border-radius: var(--radius-full);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            position: relative;
+        }
+        .seat-screen::after {
+            content: "SCREEN";
+            position: absolute;
+            top: 8px; left: 0; right: 0;
+            text-align: center;
+            font-size: var(--fs-micro);
+            letter-spacing: var(--track-wide);
+            color: var(--text-muted);
+        }
+        .seat-row { margin-bottom: 0.75rem; }
+        .seat-row-label {
+            display: flex;
+            align-items: baseline;
+            gap: 0.45rem;
+            margin-bottom: 0.35rem;
+            font-size: var(--fs-micro);
+            letter-spacing: var(--track-wide);
+            color: var(--text-muted);
+        }
+        .seat-row-label b {
+            font-size: var(--fs-xs);
+            color: var(--text-soft);
+            letter-spacing: var(--track-normal);
+        }
+        .seat-grid { display: flex; gap: 0.4rem; }
+        .map-seat {
+            flex: 1;
+            height: 34px;
+            border-radius: var(--radius-xs) var(--radius-xs) 4px 4px;
+            border: 1px solid var(--line-strong);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-soft);
+            font-size: var(--fs-2xs);
+            font-weight: 600;
+            font-family: var(--font-mono);
+            cursor: pointer;
+            transition: all var(--dur-fast) var(--ease);
+        }
+        .map-seat:hover { background: rgba(242,139,74,0.18); border-color: var(--accent); color: #fff; }
+        .map-seat.is-selected {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        .seat-legend {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            padding-top: 0.6rem;
+            border-top: 1px solid var(--line);
+            font-size: var(--fs-micro);
+            color: var(--text-muted);
+        }
+        .seat-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+        .seat-legend i {
+            width: 11px; height: 11px;
+            border-radius: 3px;
+            border: 1px solid var(--line-strong);
+            display: inline-block;
+        }
+        .seat-legend i.sel { background: var(--accent); border-color: var(--accent); }
+
+        .selected-seat-detail {
+            padding: 0.75rem 0.85rem;
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+        }
+        .selected-seat-detail .eyebrow {
+            font-size: var(--fs-micro);
+            letter-spacing: var(--track-wide);
+            text-transform: uppercase;
+            color: var(--accent-hover);
+        }
+        .selected-seat-detail .code {
+            font-family: var(--font-mono);
+            font-size: var(--fs-lg);
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 0.15rem 0 0.2rem;
+        }
+        .selected-seat-detail .blurb {
+            font-size: var(--fs-2xs);
+            line-height: var(--leading-snug);
+            color: var(--text-soft);
+        }
+
+        /* ================================================================
+           PERFORMANCE METER
+           ================================================================ */
+        .th-fps {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.28rem;
+            height: 34px;
+            padding: 0 0.7rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--line);
+            background: rgba(24,24,28,0.8);
+            color: var(--text-soft);
+            font-family: var(--font-mono);
+            font-size: var(--fs-2xs);
+            font-weight: 600;
+            cursor: help;
+        }
+        .th-fps.is-good { color: #4ade80; }
+        .th-fps.is-mid  { color: #e0b341; }
+        .th-fps.is-bad  { color: #f97316; }
+        .th-fps .u { font-size: var(--fs-micro); color: var(--text-muted); font-weight: 400; }
+        </style>
+</head>
+<body>
+    <canvas id="theatre-canvas"></canvas>
+
+    <!-- Top chrome -->
+    <div class="th-hud th-top">
+        <button class="th-back" id="thBack" title="Back to player (Esc)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span>Back</span>
+        </button>
+        <div class="th-title-block">
+            <div class="th-title" id="thTitle">3D Theatre</div>
+            <div class="th-subtitle" id="thSubtitle">Loading…</div>
+        </div>
+        <div class="th-presence" id="thPresence">
+            <span class="dot"></span>
+            <span id="thPresenceText">Solo</span>
+        </div>
+        <span class="th-spacer"></span>
+        <button class="th-btn" id="thResetView" title="Return to the rear entrance">Reset view</button>
+        <button class="th-fps" id="thFps" title="Frames per second. Click to cycle render quality.">
+            <span id="thFpsValue">--</span><span class="u">FPS</span>
+        </button>
+        <button class="th-btn" id="thPartyToggle" aria-pressed="false" title="Watch Party panel">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            <span>Party</span>
+        </button>
+    </div>
+
+    <!-- Bottom transport.
+         The seek row only makes sense for a source we decode ourselves.
+         When a provider iframe owns the screen, the row is hidden and
+         replaced by a provider status strip, because a seek bar wired to
+         nothing is worse than no seek bar. -->
+    <div class="th-hud th-bottom is-idle" id="thBottom">
+        <div class="th-seek-row" id="thSeekRow">
+            <span class="th-time" id="thTimeNow">00:00</span>
+            <input type="range" class="th-range" id="thSeek" min="0" max="100" step="0.1" value="0" aria-label="Seek">
+            <span class="th-time" id="thTimeEnd">00:00</span>
+        </div>
+        <div class="th-provider" id="thProviderStrip" data-status="idle" hidden>
+            <span class="led"></span>
+            <span id="thProviderText">Screen idle</span>
+            <span class="th-spacer"></span>
+            <button class="th-btn" id="thReloadBtn" title="Reload this server">Reload</button>
+        </div>
+        <div class="th-controls">
+            <button class="th-btn is-primary" id="thPlay" title="Play / pause (Space)">
+                <svg id="thPlayIcon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <span id="thPlayLabel">Play</span>
+            </button>
+            <button class="th-btn" id="thMute" title="Mute">
+                <svg id="thMuteIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+            </button>
+            <input type="range" class="th-range th-vol" id="thVolume" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+            <button class="th-btn" id="thSeatBtn" title="Choose your seat" aria-pressed="false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 12h18"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                <span>Seats</span>
+            </button>
+            <button class="th-btn is-primary" id="thSourceBtn" title="Pick a film">On screen</button>
+            <span class="th-spacer"></span>
+            <button class="th-btn" id="thLightsBtn" title="House lights (L)" aria-pressed="false">Lights</button>
+            <button class="th-btn" id="thPerfBtn" title="Performance mode (P)" aria-pressed="false">Perf</button>
+            <button class="th-btn" id="thZoomBtn" title="Zoom the screen (Z)" aria-pressed="false">Zoom</button>
+            <button class="th-btn" id="thExit" title="Leave theatre (Esc)">Exit</button>
+        </div>
+    </div>
+
+    <!-- Touch movement stick. Hidden on pointer devices. -->
+    <div class="th-stick" id="thStick" aria-hidden="true">
+        <div class="th-stick-knob" id="thStickKnob"></div>
+    </div>
+
+    <div class="th-hint" id="thHint">
+        <kbd>Drag</kbd> look &nbsp;·&nbsp; <kbd>W A S D</kbd> walk &nbsp;·&nbsp; <kbd>Space</kbd> play/pause &nbsp;·&nbsp; <kbd>Esc</kbd> exit
+    </div>
+
+    <!-- ================================================================
+         FILM PICKER
+         Search the TMDB catalogue the rest of the site uses, pick a
+         server, and the title plays on the screen. Also the place to
+         load a direct link or a local file, which go through the
+         VideoTexture path instead.
+         ================================================================ -->
+    <div class="th-panel is-wide" id="thSourcePanel" hidden>
+        <div class="th-panel-head">
+            <div>
+                <div class="eyebrow">On your screen</div>
+                <h2 id="thFilmHeading">Pick something to watch</h2>
+            </div>
+            <button class="th-btn" id="thSrcClose" title="Close">Close</button>
+        </div>
+
+        <div class="th-field">
+            <input type="text" id="thSearch" placeholder="Search movies, series…" spellcheck="false" autocomplete="off">
+            <button class="th-btn is-primary" id="thSearchBtn">Search</button>
+        </div>
+
+        <div class="th-results" id="thResults"></div>
+
+        <!-- Server choice: the same six providers watch.js uses. -->
+        <div id="thServerWrap" hidden>
+            <div class="eyebrow" style="font-size:var(--fs-micro);letter-spacing:var(--track-wide);text-transform:uppercase;color:var(--text-muted);margin-bottom:0.5rem">
+                Choose a server
+            </div>
+            <div class="th-servers" id="thServers"></div>
+        </div>
+
+        <details id="thOwnSource">
+            <summary style="cursor:pointer;font-size:var(--fs-xs);color:var(--text-soft)">
+                Use your own file or link
+            </summary>
+            <div style="display:flex;flex-direction:column;gap:0.7rem;margin-top:0.8rem">
+                <p class="note" style="margin:0">
+                    A direct link (.mp4 / .webm) is decoded locally and drawn straight onto the
+                    3D screen. A file from this device works here but cannot be shared with
+                    party guests.
+                </p>
+                <div class="th-field">
+                    <input type="url" id="thSrcUrl" placeholder="https://example.com/movie.mp4" spellcheck="false">
+                    <button class="th-btn" id="thSrcApply">Load</button>
+                </div>
+                <label class="th-file" for="thSrcFile" id="thFileLabel">Open a video file from this device…</label>
+                <input type="file" id="thSrcFile" accept="video/*" hidden>
+            </div>
+        </details>
+    </div>
+
+    <!-- ================================================================
+         SEAT PICKER
+         Two lettered rows. Row B is on a raised platform so the back
+         row has a clean sightline. Picking a seat walks you there.
+         ================================================================ -->
+    <div class="th-panel" id="thSeatPanel" hidden>
+        <div class="th-panel-head">
+            <div>
+                <div class="eyebrow">Make yourself comfortable</div>
+                <h2>Ten wide recliners</h2>
+            </div>
+            <button class="th-btn" id="thSeatClose" title="Close">Close</button>
+        </div>
+
+        <div class="seat-plan" id="thSeatPlan">
+            <div class="seat-screen"></div>
+            <!-- rows injected by theatre-app.js from SEAT_LAYOUT -->
+            <div class="seat-legend">
+                <span><i></i> Available</span>
+                <span><i class="sel"></i> Your selection</span>
+            </div>
+        </div>
+
+        <div class="selected-seat-detail" id="thSeatDetail">
+            <div class="eyebrow">Your spot</div>
+            <div class="code" id="thSeatCode">B3</div>
+            <div class="blurb" id="thSeatBlurb"></div>
+        </div>
+
+        <button class="th-btn is-primary" id="thSitBtn" style="height:40px">
+            Take that seat
+        </button>
+    </div>
+
+    <!-- Party slide-over -->
+    <aside class="th-party" id="thParty">
+        <div class="th-party-head">
+            <h3>Watch Party</h3>
+            <div class="th-roomcode" id="thRoomWrap" hidden>
+                <code id="thRoomCode">----</code>
+                <button class="th-btn" id="thCopyRoom" title="Copy invite link">Copy</button>
+            </div>
+            <div class="th-tabs">
+                <button class="th-tab is-active" data-tab="chat">Chat</button>
+                <button class="th-tab" data-tab="people">People</button>
+            </div>
+            <div class="th-field" id="thPartyJoin" hidden>
+                <input type="text" id="thJoinCode" placeholder="Room code" spellcheck="false">
+                <button class="th-btn" id="thJoinBtn">Join</button>
+            </div>
+            <div class="th-field" id="thPartyStart">
+                <button class="th-btn is-primary" id="thHostBtn" style="flex:1">Start a party</button>
+                <button class="th-btn" id="thLeaveBtn" style="flex:1" hidden>Leave</button>
+            </div>
+        </div>
+        <div class="th-panel-body" id="thChatPane">
+            <div class="th-chat-log" id="thChatLog"></div>
+        </div>
+        <div class="th-panel-body" id="thPeoplePane" hidden>
+            <div class="th-members" id="thMembers"></div>
+        </div>
+        <form class="th-chat-form" id="thChatForm">
+            <input type="text" id="thChatInput" placeholder="Say something…" maxlength="300" autocomplete="off">
+            <button class="th-btn is-primary" type="submit">Send</button>
+        </form>
+    </aside>
+
+    <!-- Enter gate: also satisfies autoplay policy with a real user gesture -->
+    <div class="th-gate" id="thGate">
+        <div class="th-gate-logo"><img src="wavemirror_new.png" alt=""></div>
+        <div class="th-tag">WaveMirror 3D Theatre</div>
+        <h1 id="thGateTitle">Take your seat</h1>
+        <div class="th-spinner" id="thSpinner"></div>
+        <button class="th-enter" id="thEnter" disabled>Preparing room…</button>
+        <p class="th-gate-note">Walk the aisles with <strong>W A S D</strong>, drag to look around, and visit the café counter at the back.</p>
+    </div>
+
+    <!-- Firebase is already used by the main site for sync; loaded the same way. -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="env.js"></script>
+    <!-- data.js is deliberately NOT loaded: it is the catalogue payload and
+         the theatre reads only window.ENV for TMDB, so this stays light. -->
+
+    <script type="module" src="theatre-app.js"></script>
+    <script src="theatre-party.js"></script>
+</body>
+</html>

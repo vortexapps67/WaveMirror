@@ -9,12 +9,12 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="wavemirror_new.png">
     
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..800&family=Inter:opsz,wght@14..32,300..800&display=swap" rel="stylesheet">
+    <!-- Fonts: self-hosted and preloaded, no third-party round trip. -->
+    <link rel="preload" href="fonts/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     
     <!-- Stylesheets -->
+    <link rel="stylesheet" href="fonts/fonts.css">
     <link rel="stylesheet" href="styles.css">
     
     <!-- Dedicated Mobile-Optimized Watch Styles -->
@@ -1004,9 +1004,21 @@
                         <span>Download Offline</span>
                     </button>
                     <button class="btn-secondary" onclick="startWatchPartyFromPlayer()">🍿 Watch Party</button>
+                    <!-- 3D Theatre CTA. See openTheatreFromPlayer() in watch.js
+                         for why catalogue titles land on the poster first. -->
+                    <button class="btn-secondary" id="modalTheatreBtn" onclick="openTheatreFromPlayer()" style="display: inline-flex; align-items: center; gap: 0.4rem; border-color: rgba(99, 102, 241, 0.45); color: #fff;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 12l3-3 3 3 4-4"/></svg>
+                        <span>Watch in 3D Theatre</span>
+                    </button>
                 </div>
             </div>
-            
+
+            <!-- Floating 3D Theatre button, always one tap away on the player page. -->
+            <button class="theatre-fab" id="watchTheatreFab" title="Watch in the 3D Theatre" aria-label="Watch in the 3D Theatre"
+                onclick="openTheatreFromPlayer()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 12l3-3 3 3 4-4"/></svg>
+            </button>
+
             <div class="watch-side-card">
                 <h3 class="side-card-heading">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>

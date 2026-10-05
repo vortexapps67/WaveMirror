@@ -1,4 +1,4 @@
-// WaveMirror Watch Party Engine - P2P Sync & Audio/Chat Dashboard using PeerJS
+﻿// WaveMirror Watch Party Engine - P2P Sync & Audio/Chat Dashboard using PeerJS
 
 const ICE_CONFIG = {
     iceServers: [
@@ -1410,7 +1410,7 @@ function renderPartyCatalogGrid(list) {
     grid.innerHTML = list.map(item => `
         <div class="movie-card" onclick="selectPartyMedia('${item.id}', '${item.type || 'movie'}')" style="border-radius: 8px;">
             <div class="poster-wrapper" style="aspect-ratio: 2/3;">
-                <img class="poster-img" src="${item.poster}" alt="${item.title}" loading="lazy">
+                <img class="poster-img" src="${item.poster}" alt="${item.title}" loading="lazy" decoding="async">
                 <span class="card-badge-top" style="font-size: 0.65rem; padding: 1px 4px;">★ ${item.rating}</span>
             </div>
             <div class="movie-info" style="padding: 0.5rem; gap: 0.1rem;">

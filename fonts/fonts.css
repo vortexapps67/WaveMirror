@@ -1,0 +1,106 @@
+/* ================================================================
+   WAVEMIRROR - SELF-HOSTED TYPEFACES
+
+   Why this file exists instead of a Google Fonts <link>:
+   The site used to load Inter twice (once via a render-blocking
+   @import inside styles.css, once via <link> in every page), and
+   both hit a third-party origin on the critical path. Now the four
+   woff2 files are same-origin, preloaded, and variable so the whole
+   300-800 range costs one file instead of one file per weight.
+
+   Inter + Inter Tight are licensed under the SIL Open Font License
+   1.1. See fonts/OFL.txt.
+   ================================================================ */
+
+/* ---- Body face: Inter. Latin + Latin-Extended ---- */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('inter-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                   U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                   U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('inter-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+                   U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+                   U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+                   U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---- Display face: Inter Tight. Latin + Latin-Extended ---- */
+@font-face {
+    font-family: 'Inter Tight';
+    font-style: normal;
+    font-weight: 400 800;
+    font-display: swap;
+    src: url('inter-tight-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                   U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                   U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Inter Tight';
+    font-style: normal;
+    font-weight: 400 800;
+    font-display: swap;
+    src: url('inter-tight-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+                   U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+                   U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+                   U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ================================================================
+   METRIC-MATCHED FALLBACKS
+
+   The numbers below are not guesswork. They come from reading the
+   vertical metrics straight out of the two woff2 files:
+
+     Inter        upm 2048   typoAsc 1984   typoDesc -494   gap 0   xHeight 1118
+     Arial (ref)  upm 2048   xHeight 1062
+
+   size-adjust      = Inter x-height / Arial x-height = 1118/1062 = 105.273%
+   ascent-override  = (1984/2048) / 1.05273 = 92.023%
+   descent-override = ( 494/2048) / 1.05273 = 22.913%
+   line-gap         = 0%
+
+   Result: while the woff2 files are still in flight the browser draws
+   Arial with Inter's exact line box. Headings, buttons and the grid do
+   not jump when the real face arrives, so there is no CLS on first
+   paint and no second layout pass.
+   ================================================================ */
+@font-face {
+    font-family: 'Inter Fallback';
+    font-style: normal;
+    font-weight: 100 900;
+    src: local('Arial'), local('Helvetica'), local('Liberation Sans'),
+         local('Nimbus Sans'), local('Segoe UI');
+    size-adjust: 105.273%;
+    ascent-override: 92.023%;
+    descent-override: 22.913%;
+    line-gap-override: 0%;
+}
+
+@font-face {
+    font-family: 'Inter Tight Fallback';
+    font-style: normal;
+    font-weight: 100 900;
+    src: local('Arial Narrow'), local('Helvetica Neue Condensed'),
+         local('Liberation Sans Narrow'), local('Roboto Condensed'),
+         local('Arial'), local('Helvetica');
+    /* Narrow faces win on width; match Inter Tight's height too. */
+    size-adjust: 105.273%;
+    ascent-override: 92.023%;
+    descent-override: 22.913%;
+    line-gap-override: 0%;
+}

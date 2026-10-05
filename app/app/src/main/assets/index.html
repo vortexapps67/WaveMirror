@@ -6,10 +6,12 @@
     <title>WaveMirror | Free Cinema & Series Streaming</title>
     <meta name="description" content="WaveMirror - Stream top trending movies, 4K HDR series, original blockbusters, and live trailers 100% free with built-in popup & ad shield. Powered by TMDB API.">
     <meta name="google-site-verification" content="_VcsB-p9ObAD2xWVJylitzjf-Zum0-8YcISZxGO5CX4" />
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400..800&family=Inter:opsz,wght@14..32,300..800&display=swap" rel="stylesheet">
+
+    <!-- Fonts: self-hosted. Preload the two files the first paint needs
+         so the type is ready before the CSS-driven layout settles. -->
+    <link rel="preload" href="fonts/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="fonts/fonts.css">
     <link rel="stylesheet" href="styles.css">
     
     <!-- Favicon -->
@@ -1080,6 +1082,24 @@
             <span>&copy; 2026 <span class="brand-name-target">WaveMirror</span>. 100% Free with Ad Shield. Powered by TMDB API.</span>
             <span>v3.3 Native Stream Engine</span>
         </div>
+
+        <!-- Oversized wordmark: the last thing on the page -->
+        <div class="footer-mega" aria-hidden="true">
+            <span class="footer-mega-word">WAVE</span>
+        </div>
+
+        <!-- Contact / Request Form (Jotform) -->
+        <section class="footer-contact" aria-labelledby="footerContactTitle">
+            <div class="footer-contact-intro">
+                <span class="eyebrow">Get in touch</span>
+                <h2 id="footerContactTitle">Request a title, report a stream</h2>
+                <p class="lead">Missing something from the catalogue or found a source that will not play? Send it over and it goes straight into the queue.</p>
+            </div>
+            <div class="footer-contact-form">
+                <div id="JFWebsiteWidget-01a10acf9e0870008e26224c83b6ca22eca9"></div>
+                <script src="https://www.jotform.com/website-widgets/embed/01a10acf9e0870008e26224c83b6ca22eca9" defer></script>
+            </div>
+        </section>
     </footer>
 
     <!-- App Settings Modal -->
@@ -1211,6 +1231,12 @@
         <span><span class="tv-key-badge">OK</span> Select</span>
         <span><span class="tv-key-badge">Esc / T</span> Exit TV Mode</span>
     </div>
+
+    <!-- Floating 3D Theatre button. Sits above the bottom nav on mobile. -->
+    <button class="theatre-fab" id="theatreFab" title="Open the 3D Theatre" aria-label="Open the 3D Theatre"
+        onclick="openTheatreFab()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 12l3-3 3 3 4-4"/></svg>
+    </button>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
